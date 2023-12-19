@@ -19,7 +19,7 @@ using namespace std;
 /* 空白符和注释 */
 WhiteSpace    [ \t\n\r]*
 LineComment   "//".*
-MoreLineComment   "/*"(.*\n)*.*"*/"     
+MoreLineComment   "/*"((^"*/")*\n)*.*"*/"      
 
 /* 标识符 */
 Identifier    [a-zA-Z_][a-zA-Z0-9_]*
