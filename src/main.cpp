@@ -3,7 +3,9 @@
 #include <iostream>
 #include <memory>
 #include <string>
-#include "AST.h"
+#include "AST.hpp"
+#include "riscv.hpp"
+#include "koopa.h"
 using namespace std;
 
 // 声明 lexer 的输入, 以及 parser 函数
@@ -30,10 +32,35 @@ int main(int argc, const char *argv[]) {
   unique_ptr<BaseAST> ast;
   auto ret = yyparse(ast);
   assert(!ret);
-  freopen(output,"w",stdout);
-
-  // 输出解析得到的 AST, 其实就是个字符串
+  if(mode[1]=='k')
+  {
+    freopen(output,"w",stdout);
+    //Koopa_Dump();
+    cout<<endl;
+    ast->Dump();
+    return 0;
+  }
+  freopen("whatever.txt","w",stdout);
+    
+  //Koopa_Dump();
+  cout<<endl;
   ast->Dump();
-  cout << endl;
-  return 0;
+
+  FILE* ff=fopen("whatever.txt","r");
+  char *buf=(char *)malloc(10000000);
+  fread(buf, 1,10000000, ff);
+  /*freopen("temps.txt","w",stdout);
+  parse_string(buf,0);
+  M.clear();
+  array_size.clear();
+  deep=0;
+  now_array=0;*/
+  freopen(output,"w",stdout);
+  parse_string(buf);
+    
+    return 0;
+
+  
+
+  
 }
