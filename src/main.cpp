@@ -35,20 +35,18 @@ int main(int argc, const char *argv[]) {
   if(mode[1]=='k')
   {
     freopen(output,"w",stdout);
-    //Koopa_Dump();
-    cout<<endl;
+
     ast->Dump();
     return 0;
   }
   freopen("whatever.txt","w",stdout);
-    
-  //Koopa_Dump();
-  cout<<endl;
-  ast->Dump();
 
+  ast->Dump();
+  cout<<endl;
   FILE* ff=fopen("whatever.txt","r");
   char *buf=(char *)malloc(10000000);
   fread(buf, 1,10000000, ff);
+  //cout<<buf;
   /*freopen("temps.txt","w",stdout);
   parse_string(buf,0);
   M.clear();
