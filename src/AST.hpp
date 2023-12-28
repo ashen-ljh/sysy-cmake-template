@@ -35,7 +35,7 @@ class FuncTypeAST : public BaseAST{
   public:
     std::string type;
     void Dump() const override {
-    std::cout<<"i32 ";
+      std::cout<<"i32 ";
   }
 };
 
@@ -43,19 +43,35 @@ class BlockAST : public BaseAST{
   public:
     std::unique_ptr<BaseAST> stmt;
     void Dump() const override {
-    std::cout<<"{"<<std::endl;
-    std::cout<<"%""entry:"<<std::endl;
-    stmt->Dump();
-    std::cout<<"}";
+      std::cout<<"{"<<std::endl;
+      std::cout<<"%""entry:"<<std::endl;
+      stmt->Dump();
+      std::cout<<"}";
 
   }
 };
 
 class StmtAST : public BaseAST{
   public:
-    std::string number;
+    std::unique_ptr<BaseAST> number;
     void Dump() const override {
-    std::cout<<" ret "<<number<<std::endl;
+      std::cout<<" ret ";
+      number->Dump();
   }
 };
 
+class NumberAST : public BaseAST{
+  public:
+    std::string num;
+    void Dump() const override {
+      std::cout<<num<<std::endl;
+  }
+};
+
+class PrimaryExp:public BaseAST{
+  public:
+    std::unique_ptr<BaseAST> p_exp;
+    void Dump()const override{
+      p_exp->Dump();
+    }
+};

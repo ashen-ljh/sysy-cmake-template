@@ -42,8 +42,8 @@ using namespace std;
 %token <int_val> INT_CONST
 
 // 非终结符的类型定义
-%type <ast_val> FuncDef FuncType Block Stmt 
-%type <int_val> Number
+%type <ast_val> FuncDef FuncType Block Stmt Number
+
 
 %%
 
@@ -100,15 +100,16 @@ Block
 Stmt
   : RETURN Number ';' {
     auto ast=new StmtAST();
-    ast->number = to_string($2);
+    ast->number = unique_ptr<BaseAST>($2);
     $$ = ast;
   }
   ;
 
 Number
   : INT_CONST {
-    int num=$1;
-    $$ = num;
+    auto ast=new NumberAST();
+    ast->num=to_string($1);
+    $$ = ast;
   }
   ;
 
