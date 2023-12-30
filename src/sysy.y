@@ -42,8 +42,8 @@ using namespace std;
 %token <int_val> INT_CONST
 
 // 非终结符的类型定义
-%type <ast_val> FuncDef FuncType Block Stmt Number
-
+%type <ast_val> FuncDef FuncType Block Stmt Number PrimaryExp Exp UnaryExp
+%type <int_val> UnaryOp
 
 %%
 
@@ -98,9 +98,9 @@ Block
   ;
 
 Stmt
-  : RETURN Number ';' {
+  : RETURN Exp ';' {
     auto ast=new StmtAST();
-    ast->number = unique_ptr<BaseAST>($2);
+    ast->exp = unique_ptr<BaseAST>($2);
     $$ = ast;
   }
   ;
@@ -112,6 +112,50 @@ Number
     $$ = ast;
   }
   ;
+
+Exp
+  : UnaryExp {
+    auto ast= new ExpAST();
+    ast->u_exp=unique_ptr<BaseAST>($1);
+    $$=ast;
+  }
+  ;
+
+PrimaryExp
+  :'(' Exp ')'{
+    auto ast=new PrimaryExpAST();
+    ast->p_exp=unique_ptr<BaseAST>($2);
+    $$=ast;
+  }|Number {
+      auto ast=new PrimaryExpAST();
+      ast->p_exp=unique_ptr<BaseAST>($1);
+      $$=ast;
+  }
+  ;  
+
+UnaryExp
+  : PrimaryExp{
+      auto ast=new UnaryExpAST();
+      ast->pu_exp=unique_ptr<BaseAST>($1);
+      ast->op=-1;
+      $$=ast;
+  }|UnaryOp UnaryExp{
+      auto ast=new UnaryExpAST();
+      ast->pu_exp=unique_ptr<BaseAST>($2);
+      ast->op=$1;
+      $$=ast;
+  }
+  ;
+
+UnaryOp
+    : '+'{
+        $$ = NoOperation;
+    }|'-'{
+        $$ = Invert;
+    }|'!'{
+        $$ = EqualZero;
+    };
+
 
 %%
 
