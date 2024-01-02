@@ -113,7 +113,7 @@ class UnaryExpAST : public BaseAST{
       if(op==-1||op==NoOperation) pu_exp->Dump();
       else if(op==Invert){
         pu_exp->Dump();
-        std::cout<<" %"<<nowww+1<<" = sub 0. %"<<nowww<<std::endl;
+        std::cout<<" %"<<nowww+1<<" = sub 0, %"<<nowww<<std::endl;
         nowww++;
       } 
       else if(op==EqualZero){
