@@ -116,6 +116,7 @@ Reg Visit(const koopa_raw_value_t &value)
         case KOOPA_RVT_INTEGER:
             result_var=Visit(kind.data.integer);
             break;
+        
         default:
             ;
     }
@@ -165,8 +166,41 @@ Reg Visit(const koopa_raw_binary_t &binary)
         case 7://sub
             std::cout << " sub   " << result_name << ", " << left_name << ", " << right_name << std::endl;
             break;
+        case 0://ne
+            std::cout << " xor   " << result_name << ", " << left_name << ", " << right_name << std::endl;
+            std::cout << " snez  " << result_name << ", " << result_name << std::endl;
+            break;
+        case 2://gt
+            std::cout << " sgt   " << result_name << ", " << left_name << ", " << right_name << std::endl;
+            break;
+        case 3://lt
+            std::cout << " slt   " << result_name << ", " << left_name << ", " << right_name << std::endl;
+            break;
+        case 4://ge
+            std::cout << " slt   " << result_name << ", " << left_name << ", " << right_name << std::endl;
+            std::cout << " xori  " << result_name << ", " << result_name << ", 1" << std::endl;
+            break;
+        case 5://le
+            std::cout << " sgt   " << result_name << ", " << left_name << ", " << right_name << std::endl;
+            std::cout << " xori  " << result_name << ", " << result_name << ", 1" << std::endl;
+            break;
+        case 8://mul
+            std::cout << " mul   " << result_name << ", " << left_name << ", " << right_name << std::endl;
+            break;
+        case 9://div
+            std::cout << " div   " << result_name << ", " << left_name << ", " << right_name << std::endl;
+            break;
+        case 10://mod
+            std::cout << " rem   " << result_name << ", " << left_name << ", " << right_name << std::endl;
+            break;
+        case 11://and
+            std::cout << " and   " << result_name << ", " << left_name << ", " << right_name << std::endl;
+            break;
+        case 12://or
+            std::cout << " or    " << result_name << ", " << left_name << ", " << right_name << std::endl;
+            break;
         default:
-        ;
+            assert(false);
     }
     return result_var;
 }
