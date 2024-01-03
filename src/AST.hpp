@@ -120,7 +120,7 @@ class LOrExpAST : public BaseAST{
         ++nowww;
         std::cout<<" %"<<nowww<<" = ne %"<<now2<<", 0"<<std::endl;
         ++nowww;
-        std::cout<<" %"<<nowww<<" or %"<<nowww-2<<", %"<<nowww-1<<std::endl;
+        std::cout<<" %"<<nowww<<" = or %"<<nowww-2<<", %"<<nowww-1<<std::endl;
         ++nowww;
       }
     }
@@ -148,7 +148,7 @@ class LAndExpAST : public BaseAST{
         ++nowww;
         std::cout<<" %"<<nowww<<" = ne %"<<now2<<", 0"<<std::endl;
         ++nowww;
-        std::cout<<" %"<<nowww<<" and %"<<nowww-2<<", %"<<nowww-1<<std::endl;
+        std::cout<<" %"<<nowww<<" = and %"<<nowww-2<<", %"<<nowww-1<<std::endl;
         ++nowww;
       }
     }
