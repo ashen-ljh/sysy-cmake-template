@@ -284,11 +284,11 @@ class LAndExpAST : public BaseAST{
       }
       else
       {
-        land_exp->Dump();
-        now1=nowww-1;
         eq_exp->Dump();
+        now1=nowww-1;
+        land_exp->Dump();
         now2=nowww-1;
-        std::cout<<" %"<<nowww<<" = and %"<<now1<<", %"<<now2<<std::endl;
+        std::cout<<" %"<<nowww<<" = and %"<<now2<<", %"<<now1<<std::endl;
         ++nowww;
       }
     }
@@ -308,11 +308,11 @@ class LOrExpAST : public BaseAST{
       }
       else
       {
-        lor_exp->Dump();
-        now1=nowww-1;
         land_exp->Dump();
+        now1=nowww-1;
+        lor_exp->Dump();
         now2=nowww-1;
-        std::cout<<" %"<<nowww<<" = or %"<<now1<<", %"<<now2<<std::endl;
+        std::cout<<" %"<<nowww<<" = or %"<<now2<<", %"<<now1<<std::endl;
         ++nowww;
       }
     }
