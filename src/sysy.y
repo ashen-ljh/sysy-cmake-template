@@ -121,91 +121,58 @@ Exp
   }
   ;
 
-PrimaryExp
-  :'(' Exp ')'{
-    auto ast=new PrimaryExpAST();
-    ast->p_exp=unique_ptr<BaseAST>($2);
-    $$=ast;
-  }|Number {
-      auto ast=new PrimaryExpAST();
-      ast->p_exp=unique_ptr<BaseAST>($1);
-      $$=ast;
-  }
-  ;  
-
-UnaryExp
-  : PrimaryExp{
-      auto ast=new UnaryExpAST();
-      ast->pu_exp=unique_ptr<BaseAST>($1);
+LOrExp
+  : LAndExp{
+      auto ast=new LOrExpAST();
+      ast->land_exp=unique_ptr<BaseAST>($1);
       ast->op=-1;
       $$=ast;
-  }|UnaryOp UnaryExp{
-      auto ast=new UnaryExpAST();
-      ast->pu_exp=unique_ptr<BaseAST>($2);
-      ast->op=$1;
+  }|LOrExp LOR LAndExp{
+      auto ast=new LOrExpAST();
+      ast->lor_exp=unique_ptr<BaseAST>($1);
+      ast->land_exp=unique_ptr<BaseAST>($3);
+      ast->op=Or;
       $$=ast;
   }
   ;
 
-UnaryOp
-  : '+'{
-    $$ = NoOperation;
-  }|'-'{
-    $$ = Invert;
-  }|'!'{
-    $$ = EqualZero;
-  }
-  ;
-
-MulExp
-  : UnaryExp {
-      auto ast=new MulExpAST();
-      ast->u_exp=unique_ptr<BaseAST>($1);
+  LAndExp
+  : EqExp{
+      auto ast=new LAndExpAST();
+      ast->eq_exp=unique_ptr<BaseAST>($1);
       ast->op=-1;
       $$=ast;
-  }|MulExp '*' UnaryExp{
-      auto ast=new MulExpAST();
-      ast->mu_exp=unique_ptr<BaseAST>($1);
-      ast->u_exp=unique_ptr<BaseAST>($3);
-      ast->op=Mul;
-      $$=ast;
-  }|MulExp '/' UnaryExp{
-      auto ast=new MulExpAST();
-      ast->mu_exp=unique_ptr<BaseAST>($1);
-      ast->u_exp=unique_ptr<BaseAST>($3);
-      ast->op=Div;
-      $$=ast;
-  }|MulExp '%' UnaryExp{
-      auto ast=new MulExpAST();
-      ast->mu_exp=unique_ptr<BaseAST>($1);
-      ast->u_exp=unique_ptr<BaseAST>($3);
-      ast->op=Mod;
+  }|LAndExp LAND EqExp{
+      auto ast=new LAndExpAST();
+      ast->land_exp=unique_ptr<BaseAST>($1);
+      ast->eq_exp=unique_ptr<BaseAST>($3);
+      ast->op=And;
       $$=ast;
   }
   ;
 
-AddExp
-  : MulExp{
-      auto ast=new AddExpAST();
-      ast->mu_exp=unique_ptr<BaseAST>($1);
+  EqExp
+  : RelExp{
+      auto ast=new EqExpAST();
+      ast->rel_exp=unique_ptr<BaseAST>($1);
       ast->op=-1;
       $$=ast;
-  }|AddExp '+' MulExp{
-      auto ast=new AddExpAST();
-      ast->mu_exp=unique_ptr<BaseAST>($3);
-      ast->add_exp=unique_ptr<BaseAST>($1);
-      ast->op=Add;
+  }|EqExp EQ RelExp{
+      auto ast=new EqExpAST();
+      ast->eq_exp=unique_ptr<BaseAST>($1);
+      ast->rel_exp=unique_ptr<BaseAST>($3);
+      ast->op=Equal;
       $$=ast;
-  }|AddExp '-' MulExp{
-      auto ast=new AddExpAST();
-      ast->mu_exp=unique_ptr<BaseAST>($3);
-      ast->add_exp=unique_ptr<BaseAST>($1);
-      ast->op=Sub;
+  }|EqExp NEQ RelExp{
+      auto ast=new EqExpAST();
+      ast->eq_exp=unique_ptr<BaseAST>($1);
+      ast->rel_exp=unique_ptr<BaseAST>($3);
+      ast->op=NotEqual;
       $$=ast;
   }
   ;
-  
-RelExp
+
+  RelExp
   : AddExp{
       auto ast=new RelExpAST();
       ast->add_exp=unique_ptr<BaseAST>($1);
@@ -238,56 +205,95 @@ RelExp
   }
   ;
 
-EqExp
-  : RelExp{
-      auto ast=new EqExpAST();
-      ast->rel_exp=unique_ptr<BaseAST>($1);
+  AddExp
+  : MulExp{
+      auto ast=new AddExpAST();
+      ast->mu_exp=unique_ptr<BaseAST>($1);
       ast->op=-1;
       $$=ast;
-  }|EqExp EQ RelExp{
-      auto ast=new EqExpAST();
-      ast->eq_exp=unique_ptr<BaseAST>($1);
-      ast->rel_exp=unique_ptr<BaseAST>($3);
-      ast->op=Equal;
+  }|AddExp '+' MulExp{
+      auto ast=new AddExpAST();
+      ast->mu_exp=unique_ptr<BaseAST>($3);
+      ast->add_exp=unique_ptr<BaseAST>($1);
+      ast->op=Add;
       $$=ast;
-  }|EqExp NEQ RelExp{
-      auto ast=new EqExpAST();
-      ast->eq_exp=unique_ptr<BaseAST>($1);
-      ast->rel_exp=unique_ptr<BaseAST>($3);
-      ast->op=NotEqual;
+  }|AddExp '-' MulExp{
+      auto ast=new AddExpAST();
+      ast->mu_exp=unique_ptr<BaseAST>($3);
+      ast->add_exp=unique_ptr<BaseAST>($1);
+      ast->op=Sub;
       $$=ast;
   }
   ;
 
-LAndExp
-  : EqExp{
-      auto ast=new LAndExpAST();
-      ast->eq_exp=unique_ptr<BaseAST>($1);
+  MulExp
+  : UnaryExp {
+      auto ast=new MulExpAST();
+      ast->u_exp=unique_ptr<BaseAST>($1);
       ast->op=-1;
       $$=ast;
-  }|LAndExp LAND EqExp{
-      auto ast=new LAndExpAST();
-      ast->land_exp=unique_ptr<BaseAST>($1);
-      ast->eq_exp=unique_ptr<BaseAST>($3);
-      ast->op=And;
+  }|MulExp '*' UnaryExp{
+      auto ast=new MulExpAST();
+      ast->mu_exp=unique_ptr<BaseAST>($1);
+      ast->u_exp=unique_ptr<BaseAST>($3);
+      ast->op=Mul;
+      $$=ast;
+  }|MulExp '/' UnaryExp{
+      auto ast=new MulExpAST();
+      ast->mu_exp=unique_ptr<BaseAST>($1);
+      ast->u_exp=unique_ptr<BaseAST>($3);
+      ast->op=Div;
+      $$=ast;
+  }|MulExp '%' UnaryExp{
+      auto ast=new MulExpAST();
+      ast->mu_exp=unique_ptr<BaseAST>($1);
+      ast->u_exp=unique_ptr<BaseAST>($3);
+      ast->op=Mod;
       $$=ast;
   }
   ;
 
-LOrExp
-  : LAndExp{
-      auto ast=new LOrExpAST();
-      ast->land_exp=unique_ptr<BaseAST>($1);
+  UnaryExp
+  : PrimaryExp{
+      auto ast=new UnaryExpAST();
+      ast->pu_exp=unique_ptr<BaseAST>($1);
       ast->op=-1;
       $$=ast;
-  }|LOrExp LOR LAndExp{
-      auto ast=new LOrExpAST();
-      ast->lor_exp=unique_ptr<BaseAST>($1);
-      ast->land_exp=unique_ptr<BaseAST>($3);
-      ast->op=Or;
+  }|UnaryOp UnaryExp{
+      auto ast=new UnaryExpAST();
+      ast->pu_exp=unique_ptr<BaseAST>($2);
+      ast->op=$1;
       $$=ast;
   }
   ;
+
+PrimaryExp
+  :'(' Exp ')'{
+    auto ast=new PrimaryExpAST();
+    ast->p_exp=unique_ptr<BaseAST>($2);
+    $$=ast;
+  }|Number {
+      auto ast=new PrimaryExpAST();
+      ast->p_exp=unique_ptr<BaseAST>($1);
+      $$=ast;
+  }
+  ;  
+
+
+UnaryOp
+  : '+'{
+    $$ = NoOperation;
+  }|'-'{
+    $$ = Invert;
+  }|'!'{
+    $$ = EqualZero;
+  }
+  ;
+
+
+
+
+
 
 %%
 

@@ -1,7 +1,10 @@
 fun @main(): i32 {
 %entry:
- %0 = add 0, 1
- %1 = add 0, 2
- %2 = le %0, %1
- ret %2
+ %0 = add 0, 5
+ %1 = eq 0, %0
+ %2 = add 0, 6
+ %3 = add 0, 3
+ %4 = and %3, %2
+ %5 = or %4, %1
+ ret %5
 }
