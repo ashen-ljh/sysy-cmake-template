@@ -77,7 +77,7 @@ class StmtAST : public BaseAST{
     std::unique_ptr<BaseAST> exp;
     void Dump() const override {
       exp->Dump();
-      std::cout<<" ret %"<<nowww<<std::endl;
+      std::cout<<" ret %"<<nowww-1<<std::endl;
   }
 };
 
@@ -85,15 +85,16 @@ class NumberAST : public BaseAST{
   public:
     std::string num;
     void Dump() const override {
-    std::cout<<" %0 = add 0, "<<num<<std::endl;
+    std::cout<<" %"<<nowww<<" = add 0, "<<num<<std::endl;
+    nowww++;
   }
 };
 
 class ExpAST : public BaseAST{
   public:
-    std::unique_ptr<BaseAST> u_exp;
+    std::unique_ptr<BaseAST> add_exp;
     void Dump()const override{
-      u_exp->Dump();
+      add_exp->Dump();
     }
 };
 
@@ -113,14 +114,89 @@ class UnaryExpAST : public BaseAST{
       if(op==-1||op==NoOperation) pu_exp->Dump();
       else if(op==Invert){
         pu_exp->Dump();
-        std::cout<<" %"<<nowww+1<<" = sub 0, %"<<nowww<<std::endl;
+        std::cout<<" %"<<nowww<<" = sub 0, %"<<nowww-1<<std::endl;
         nowww++;
       } 
       else if(op==EqualZero){
         pu_exp->Dump();
-        std::cout<<" %"<<nowww+1<<" = eq 0, %"<<nowww<<std::endl;
+        std::cout<<" %"<<nowww<<" = eq 0, %"<<nowww-1<<std::endl;
         nowww++;
       }
     }
 };
 
+class MulExpAST : public BaseAST{
+  public:
+    std::unique_ptr<BaseAST> mu_exp;
+    int op;
+    std::unique_ptr<BaseAST> u_exp;
+    void Dump()const override
+    {
+      int now1,now2;
+      if(op==Mul)
+      {
+        mu_exp->Dump();
+        now1=nowww-1;
+        u_exp->Dump();
+        now2=nowww-1;
+        std::cout<<" %"<<nowww<<" = mul %"<<now1<<", %"<<now2<<std::endl;
+        ++nowww;
+      }
+      else if(op==Div)
+      {
+        mu_exp->Dump();
+        now1=nowww-1;
+        u_exp->Dump();
+        now2=nowww-1;
+        std::cout<<" %"<<nowww<<" = div %"<<now1<<", %"<<now2<<std::endl;
+        ++nowww;
+      }
+      else if(op==Mod)
+      {
+        mu_exp->Dump();
+        now1=nowww-1;
+        u_exp->Dump();
+        now2=nowww-1;
+        std::cout<<" %"<<nowww<<" = mod %"<<now1<<", %"<<now2<<std::endl;
+        ++nowww;
+      }
+      else if(op==-1)
+      {
+        u_exp->Dump();
+      }
+    }
+};
+
+class AddExpAST : public BaseAST{
+  public:
+    std::unique_ptr<BaseAST> mu_exp;
+    int op;
+    std::unique_ptr<BaseAST> add_exp;
+    void Dump()const override
+    {
+      int now1,now2;
+      if(op==Add)
+      {
+        mu_exp->Dump();
+        now1=nowww-1;
+        add_exp->Dump();
+        now2=nowww-1;
+        std::cout<<" %"<<nowww<<" = add %"<<now1<<", %"<<now2<<std::endl;
+        ++nowww;
+      }
+      else if(op==Sub)
+      {
+        mu_exp->Dump();
+        now1=nowww-1;
+        add_exp->Dump();
+        now2=nowww-1;
+        std::cout<<" %"<<nowww<<" = sub %"<<now2<<", %"<<now1<<std::endl;
+        ++nowww;
+      }
+      else if(op==-1)
+      {
+        mu_exp->Dump();
+      }
+    }
+
+};
