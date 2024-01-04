@@ -33,18 +33,21 @@ using namespace std;
   std::string *str_val;
   int int_val;
   BaseAST *ast_val;
+  std::vector<std::unique_ptr<BaseAST> > *vec_val;
 }
 
 // lexer 返回的所有 token 种类的声明
 // 注意 IDENT 和 INT_CONST 会返回 token 的值, 分别对应 str_val 和 int_val
-%token INT RETURN LOR LAND EQ NEQ GEQ LEQ LQ GQ
+%token INT RETURN LOR LAND EQ NEQ GEQ LEQ LQ GQ CONST
 %token <str_val> IDENT
 %token <int_val> INT_CONST
 
 // 非终结符的类型定义
 %type <ast_val> FuncDef FuncType Block Stmt Number PrimaryExp Exp UnaryExp MulExp AddExp LOrExp RelExp EqExp LAndExp
+%type <ast_val> BlockItem Decl LVal ConstDecl ConstDef ConstInitVal ConstExp
 %type <int_val> UnaryOp
-
+%type <vec_val> BlockItemList ConstDefList
+%type <str_val> Type 
 %%
 
 // 开始符, CompUnit ::= FuncDef, 大括号后声明了解析完成后 parser 要做的事情
@@ -90,12 +93,41 @@ FuncType
   ;
 
 Block
-  : '{' Stmt '}' {
+  : '{' BlockItemList '}' {
     auto ast=new BlockAST();
-    ast->stmt = unique_ptr<BaseAST>($2);
+    vector<unique_ptr<BaseAST>> *v_ptr = ($2);
+    for(auto it=v_ptr->begin();it!=v_ptr->end();it++)
+      ast->block_item_list.push_back(move(*it));
     $$ = ast;
   }
   ;
+
+BlockItem
+    : Decl {
+        auto ast = new BlockItemAST();
+        ast->type = BlockItemType::decl;
+        ast->content = unique_ptr<BaseAST>($1);
+        $$ = ast;
+    }
+    | Stmt {
+        auto ast = new BlockItemAST();
+        ast->type = BlockItemType::stmt;
+        ast->content = unique_ptr<BaseAST>($1);
+        $$ = ast;
+    }
+    ;
+
+BlockItemList
+    : {
+        vector<unique_ptr<BaseAST>> *v = new vector<unique_ptr<BaseAST>>;
+        $$ = v;
+    }
+    | BlockItemList BlockItem {
+        vector<unique_ptr<BaseAST>> *v = ($1);
+        v->push_back(unique_ptr<BaseAST>($2));
+        $$ = v;
+    }
+    ;
 
 Stmt
   : RETURN Exp ';' {
@@ -108,7 +140,7 @@ Stmt
 Number
   : INT_CONST {
     auto ast=new NumberAST();
-    ast->num=to_string($1);
+    ast->num=$1;
     $$ = ast;
   }
   ;
@@ -270,12 +302,19 @@ LOrExp
 PrimaryExp
   :'(' Exp ')'{
     auto ast=new PrimaryExpAST();
+    ast->type = PrimaryExpType::exp;
     ast->p_exp=unique_ptr<BaseAST>($2);
     $$=ast;
   }|Number {
       auto ast=new PrimaryExpAST();
+      ast->type = PrimaryExpType::number;
       ast->p_exp=unique_ptr<BaseAST>($1);
       $$=ast;
+  }|LVal{
+      auto ast = new PrimaryExpAST();
+      ast->type = PrimaryExpType::lval;
+      ast->p_exp = unique_ptr<BaseAST>($1);
+      $$ = ast;
   }
   ;  
 
@@ -290,9 +329,76 @@ UnaryOp
   }
   ;
 
+Decl
+  : ConstDecl{
+    auto ast = new DeclAST();
+    ast->type = DeclType::const_decl;
+    ast->c_decl = unique_ptr<BaseAST>($1);
+    $$ = ast;
+  }
+  ;
 
+ConstDecl
+  : CONST Type ConstDefList ';'{
+    auto ast=new ConstDeclAST();
+    ast->b_type=*unique_ptr<string>($2);
+    vector<unique_ptr<BaseAST> > *v_ptr = ($3);
+    for (auto it = v_ptr->begin(); it != v_ptr->end(); it++)
+      ast->const_def_list.push_back(move(*it));
+    $$ = ast;
+  }
+  ;
 
+ConstDef
+  : IDENT '=' ConstInitVal{
+    auto ast=new ConstDefAST();
+    ast->ident=*unique_ptr<string>($1);
+    ast->c_initval=unique_ptr<BaseAST>($3);
+    $$=ast;
+  }
+  ;
 
+ConstInitVal
+  : ConstExp{
+    auto ast=new ConstInitValAST();
+    ast->c_exp=unique_ptr<BaseAST>($1);
+    $$=ast;
+  }
+  ;
+
+ConstExp
+  : Exp{
+    auto ast=new ConstExpAST();
+    ast->exp=unique_ptr<BaseAST>($1);
+    $$=ast;
+  }
+  ;
+ConstDefList
+  : ConstDef {
+    vector<unique_ptr<BaseAST>> *v = new vector<unique_ptr<BaseAST>>;
+    v->push_back(unique_ptr<BaseAST>($1));
+    $$ = v;
+  }|ConstDefList ',' ConstDef {
+      vector<unique_ptr<BaseAST>> *v = ($1);
+      v->push_back(unique_ptr<BaseAST>($3));
+      $$ = v;
+  }
+  ;
+
+Type
+  : INT{
+    string *type = new string("int");
+    $$ = type;
+  }
+  ;
+
+LVal
+  : IDENT{
+    auto ast = new LValAST();
+    ast->ident=*unique_ptr<string>($1);
+    $$=ast;
+  }
+  ;
 
 
 %%

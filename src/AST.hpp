@@ -1,5 +1,23 @@
 #pragma once
 #include <iostream>
+#include <vector>
+#include <string>
+#include <memory>
+#include <cassert>
+#include <map>
+#include <variant>
+#include <stdlib.h>
+
+enum class FuncFParamType { var, list };
+enum class UnaryExpType { primary, unary, func_call };
+enum class PrimaryExpType { exp, number, lval, list };
+enum class StmtType { if_, ifelse, simple, while_ };
+enum class SimpleStmtType { lval, exp, block, ret, break_, continue_, list };
+enum class DeclType { const_decl, var_decl };
+enum class ConstInitValType { const_exp, list };
+enum class BlockItemType { decl, stmt };
+enum class InitValType { exp, list };
+
 
 // 指令级操作
 #define NoOperation 0
@@ -20,12 +38,16 @@
 #define Or 15
 #define NotEqualZero 16
 
+static std::map<std::string, int> const_val;
+
+
 static int nowww=0;
 // 所有 AST 的基类
 class BaseAST {
  public:
   virtual ~BaseAST() = default;
   virtual void Dump() const = 0;
+  virtual int Calc() const { assert(false); return -1; }
 };
 
 // CompUnit 是 BaseAST
@@ -62,14 +84,22 @@ class FuncTypeAST : public BaseAST{
 
 class BlockAST : public BaseAST{
   public:
-    std::unique_ptr<BaseAST> stmt;
+    std::vector<std::unique_ptr<BaseAST>> block_item_list;
     void Dump() const override {
       std::cout<<"{"<<std::endl;
       std::cout<<"%""entry:"<<std::endl;
-      stmt->Dump();
+      for (auto&& block_item : block_item_list) block_item->Dump();
       std::cout<<"}";
 
   }
+};
+
+class BlockItemAST : public BaseAST
+{
+public:
+    BlockItemType type;
+    std::unique_ptr<BaseAST> content;
+    void Dump() const override { content->Dump(); }
 };
 
 class StmtAST : public BaseAST{
@@ -83,10 +113,13 @@ class StmtAST : public BaseAST{
 
 class NumberAST : public BaseAST{
   public:
-    std::string num;
+    int num;
     void Dump() const override {
     std::cout<<" %"<<nowww<<" = add 0, "<<num<<std::endl;
     nowww++;
+  }
+  int Calc()const override{
+      return num;
   }
 };
 
@@ -95,6 +128,9 @@ class ExpAST : public BaseAST{
     std::unique_ptr<BaseAST> lor_exp;
     void Dump()const override{
       lor_exp->Dump();
+    }
+    int Calc()const override{
+      return lor_exp->Calc();
     }
 };
 
@@ -124,6 +160,17 @@ class LOrExpAST : public BaseAST{
         ++nowww;
       }
     }
+    int Calc()const override{
+      if(op==-1) return land_exp->Calc();
+      else
+      {
+        int left_v= lor_exp->Calc();
+        if(left_v) return 1;
+        int right_v=land_exp->Calc();
+        if(right_v) return 1;
+        return 0;
+      }
+    }
 };
 
 class LAndExpAST : public BaseAST{
@@ -150,6 +197,16 @@ class LAndExpAST : public BaseAST{
         ++nowww;
         std::cout<<" %"<<nowww<<" = and %"<<nowww-2<<", %"<<nowww-1<<std::endl;
         ++nowww;
+      }
+    }
+    int Calc()const override{
+      if(op==-1) return eq_exp->Calc();
+      else{
+        int left_v=land_exp->Calc();
+        if(left_v==0) return 0;
+        int right_v=eq_exp->Calc();
+        if(right_v==0) return 0;
+        return 1;
       }
     }
 };
@@ -182,6 +239,15 @@ class EqExpAST : public BaseAST{
           std::cout<<" %"<<nowww<<" = ne %"<<now1<<", %"<<now2<<std::endl;
           ++nowww;
         }
+      }
+    }
+    int Calc()const override{
+      if(op==-1) return rel_exp->Calc();
+      else{
+        int left_v=eq_exp->Calc();
+        int right_v=rel_exp->Calc();
+        if(op==Equal) return left_v==right_v;
+        else if(op==NotEqual) return left_v!=right_v;
       }
     }
 };
@@ -226,6 +292,17 @@ class RelExpAST : public BaseAST{
         }
       }
     }
+    int Calc()const override{
+      if(op==-1) return add_exp->Calc();
+      else{
+        int left_v=rel_exp->Calc();
+        int right_v=add_exp->Calc();
+        if(op==Less) return left_v<right_v;
+        else if(op==Greater) return left_v>right_v;
+        else if(op==LessEq) return left_v<=right_v;
+        else if(op==GreaterEq) return left_v>=right_v;
+      }
+    }
     
 };
 
@@ -257,6 +334,15 @@ class AddExpAST : public BaseAST{
           std::cout<<" %"<<nowww<<" = sub %"<<now2<<", %"<<now1<<std::endl;
           ++nowww;
         }
+      }
+    }
+    int Calc()const override{
+      if(op==-1) return mu_exp->Calc();
+      else{
+        int left_v=add_exp->Calc();
+        int right_v=mu_exp->Calc();
+        if(op==Add) return left_v+right_v;
+        else if(op==Sub) return left_v-right_v;
       }
     }
 };
@@ -296,6 +382,16 @@ class MulExpAST : public BaseAST{
         }
       }
     }
+    int Calc()const override{
+      if(op==-1) return u_exp->Calc();
+      else{
+        int left_v=mu_exp->Calc();
+        int right_v=u_exp->Calc();
+        if(op==Mul) return left_v*right_v;
+        else if(op==Div) return left_v/right_v;
+        else if(op==Mod) return left_v%right_v;
+      }
+    }
 };
 
 class UnaryExpAST : public BaseAST{
@@ -315,20 +411,99 @@ class UnaryExpAST : public BaseAST{
         nowww++;
       }
     }
+    int Calc()const override{
+      if(op==-1||op==NoOperation) return pu_exp->Calc();
+      else{
+        if(op==Invert) return -pu_exp->Calc();
+        else if(op==EqualZero) return !pu_exp->Calc();
+      }
+    }
 };
 
 class PrimaryExpAST : public BaseAST{
   public:
+    PrimaryExpType type;
     std::unique_ptr<BaseAST> p_exp;
     void Dump()const override{
       p_exp->Dump();
     }
+    int Calc()const override{
+      return p_exp->Calc();
+    }
 };
 
+class DeclAST : public BaseAST{
+  public:
+    DeclType type;
+    std::unique_ptr<BaseAST> c_decl;
+    void Dump()const override{
+      c_decl->Dump();
+    }
+};
 
+class ConstDeclAST : public BaseAST{
+  public:
+    std::string b_type;
+    std::vector<std::unique_ptr<BaseAST> > const_def_list;
+    void Dump() const override
+    {
+        assert(b_type == "int");
+        for (auto&& const_def : const_def_list) const_def->Dump();
+    }
+};
 
+class ConstDefAST :public BaseAST{
+  public:
+    std::string ident;
+    std::unique_ptr<BaseAST> c_initval;
+    int Calc()const override{
+      const_val[ident]=c_initval->Calc();
+      return const_val[ident];
+    }
+    void Dump() const override
+    {
+      Calc();
+    }
+    
+};
 
+class ConstInitValAST : public BaseAST{
+  public:
+    std::unique_ptr<BaseAST> c_exp;
+    void Dump() const override
+    {
+      c_exp->Dump();
+    }
+    int Calc()const override{
+      return c_exp->Calc();
+    }
+};
 
+class ConstExpAST : public BaseAST{
+  public:
+    std::unique_ptr<BaseAST> exp;
+    void Dump() const override
+    {
+      exp->Dump();
+    }
+    int Calc()const override{
+      return exp->Calc();
+    }
+};
+
+class LValAST : public BaseAST{
+  public:
+    std::string ident;
+    void Dump()const override
+    {
+      std::cout<<" %"<<nowww<<"= add "<<"0 ,"<<const_val[ident]<<std::endl;
+      nowww++;
+    }
+    int Calc() const override
+    {
+      return const_val[ident];
+    }
+};
 
 
 
