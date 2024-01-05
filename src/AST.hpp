@@ -39,7 +39,7 @@ enum class InitValType { exp, list };
 #define NotEqualZero 16
 
 static std::map<std::string, int> const_val;
-
+static std::map<std::string, int> var_type;//是变量还是常量
 
 static int nowww=0;
 // 所有 AST 的基类
@@ -48,6 +48,7 @@ class BaseAST {
   virtual ~BaseAST() = default;
   virtual void Dump() const = 0;
   virtual int Calc() const { assert(false); return -1; }
+  virtual void dump() const { assert(false); return ;}
 };
 
 // CompUnit 是 BaseAST
@@ -104,11 +105,21 @@ public:
 
 class StmtAST : public BaseAST{
   public:
+    SimpleStmtType type;
     std::unique_ptr<BaseAST> exp;
+    std::unique_ptr<BaseAST> lval;
     void Dump() const override {
-      exp->Dump();
-      std::cout<<" ret %"<<nowww-1<<std::endl;
-  }
+      if(type==SimpleStmtType::ret)
+      {
+        exp->Dump();
+        std::cout<<" ret %"<<nowww-1<<std::endl;
+      }
+      else if(type==SimpleStmtType::lval)
+      {
+        exp->Dump();
+        lval->dump();
+      }
+    }
 };
 
 class NumberAST : public BaseAST{
@@ -435,9 +446,9 @@ class PrimaryExpAST : public BaseAST{
 class DeclAST : public BaseAST{
   public:
     DeclType type;
-    std::unique_ptr<BaseAST> c_decl;
+    std::unique_ptr<BaseAST> decl;
     void Dump()const override{
-      c_decl->Dump();
+      decl->Dump();
     }
 };
 
@@ -458,10 +469,13 @@ class ConstDefAST :public BaseAST{
     std::unique_ptr<BaseAST> c_initval;
     int Calc()const override{
       const_val[ident]=c_initval->Calc();
+
+
       return const_val[ident];
     }
     void Dump() const override
     {
+      var_type[ident]=0;
       Calc();
     }
     
@@ -491,17 +505,64 @@ class ConstExpAST : public BaseAST{
     }
 };
 
+class VarDeclAST : public BaseAST{
+  public:
+    std::string b_type;
+    std::vector<std::unique_ptr<BaseAST> > var_def_list;
+    void Dump() const override
+    {
+        assert(b_type == "int");
+        for (auto&& var_def : var_def_list) var_def->Dump();
+    }
+};
+
+class VarDefAST : public BaseAST{
+  public:
+    std::string ident;
+    bool ifhavev;
+    std::unique_ptr<BaseAST> initval;
+    void Dump() const override
+    {
+      var_type[ident]=1;
+      std::cout<<" @"<<ident<<" = alloc i32"<<std::endl;
+      if(ifhavev)
+      {
+        initval->Dump();
+        std::cout<<" store %"<<nowww-1<<", @"<<ident<<std::endl;
+      }
+      else
+      {
+        const_val[ident]=0;
+      }
+    }
+};
+
+class InitValAST : public BaseAST{
+  public:
+    std::unique_ptr<BaseAST> exp;
+    void Dump() const override
+    {
+      exp->Dump();
+    }
+};
+
 class LValAST : public BaseAST{
   public:
     std::string ident;
     void Dump()const override
     {
-      std::cout<<" %"<<nowww<<"= add "<<"0 ,"<<const_val[ident]<<std::endl;
+      if(var_type[ident]==0)
+        std::cout<<" %"<<nowww<<" = add "<<"0 ,"<<const_val[ident]<<std::endl;
+      else 
+        std::cout<<" %"<<nowww<<" = load "<<"@"<<ident<<std::endl;
       nowww++;
     }
     int Calc() const override
     {
       return const_val[ident];
+    }
+    void dump()const override{
+      std::cout<<" store %"<<nowww-1<<", @"<<ident<<std::endl;
     }
 };
 
