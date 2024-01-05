@@ -1,24 +1,32 @@
-fun @main(): i32 {
-%entry:
- @x = alloc i32
- %0 = add 0, 1
- %1 = add 0, 1
- %2 = add %0, %1
- store %2, @x
- @y = alloc i32
- %3 = add 0, 3
- %4 = add 0, 2
- %5 = mul %3, %4
- store %5, @y
- @z = alloc i32
- %6 = add 0, 8
- %7 = add 0, 1
- %8 = add 0, 6
- %9 = add 0, 2
- %10 = div %8, %9
- %11 = sub %10, %7
- %12 = add %6, %11
- store %12, @z
- %13 = load @x
- ret %13
-}
+ .text
+ .globl main
+main:
+ addi  sp, sp, -80
+ li    t0, 1
+ add   t1, x0, t0
+ li    t0, 1
+ add   t2, x0, t0
+ add   t0, t1, t2
+ sw    t0, 0(sp)
+ li    t3, 3
+ add   t4, x0, t3
+ li    t3, 2
+ add   t5, x0, t3
+ mul   t3, t4, t5
+ sw    t3, 4(sp)
+ li    t6, 8
+ add   a0, x0, t6
+ li    t6, 1
+ add   a1, x0, t6
+ li    t6, 6
+ add   a2, x0, t6
+ li    t6, 2
+ add   a3, x0, t6
+ div   t6, a2, a3
+ sub   a4, t6, a1
+ add   a5, a0, a4
+ sw    a5, 8(sp)
+ lw    a6, 0(sp)
+ mv    a0, a6
+ ret
+

@@ -26,10 +26,12 @@ Reg Visit(const koopa_raw_value_t &value);
 void Visit(const koopa_raw_return_t &ret);
 Reg Visit(const koopa_raw_binary_t &binary);
 Reg Visit(const koopa_raw_integer_t &integer);
-
+Reg Visit(const koopa_raw_load_t &load);
+void Visit(const koopa_raw_store_t &store);
 
 
 int find_reg(int stat);
+int cal_size(const koopa_raw_type_t &ty);
 
 void Visit(const koopa_raw_program_t &program)
 {
@@ -66,7 +68,42 @@ void Visit(const koopa_raw_function_t &func)
     std::cout<<" .text"<<std::endl;
     std::cout<<" .globl "<<func->name+1<<std::endl;
     std::cout<<func->name+1<<":"<<std::endl;
+    assert(stack_size == 0); assert(stack_top == 0);
+    for (size_t i = 0; i < func->bbs.len; i++)
+    {
+        auto ptr = func->bbs.buffer[i];
+        koopa_raw_basic_block_t bb = reinterpret_cast<koopa_raw_basic_block_t>(ptr);
+        for (size_t j = 0; j < bb->insts.len; j++)
+        {
+            ptr = bb->insts.buffer[j];
+            koopa_raw_value_t inst = reinterpret_cast<koopa_raw_value_t>(ptr);
+            if (inst->ty->tag != KOOPA_RTT_UNIT)
+            {
+                if (inst->kind.tag == KOOPA_RVT_ALLOC)
+                    stack_size += cal_size(inst->ty->data.pointer.base);
+                else stack_size += 4;
+            }
+            //if (inst->kind.tag == KOOPA_RVT_CALL)
+            //{
+                //restore_ra = true;
+                //int arg_num = inst->kind.data.call.args.len;
+                //if (arg_num > max_arg_num)max_arg_num = arg_num;
+            //}
+        }
+        stack_size = ceil(stack_size / 16.0) * 16;
+        if (stack_size > 0 && stack_size <= 2048)
+            std::cout << " addi  sp, sp, -" << stack_size << std::endl;
+        else if (stack_size > 2048)
+        {
+            std::cout << " li    s11, -" << stack_size << std::endl;
+            std::cout << " add   sp, sp, s11" << std::endl;
+        }
+    }
     Visit(func->bbs);
+    stack_size=stack_top=0;
+    for (int i = 0; i < 16; i++)reg_stats[i] = 0;
+    value_map.clear();
+    std::cout << std::endl;
 }
 
 void Visit(const koopa_raw_basic_block_t &bb)
@@ -98,7 +135,6 @@ Reg Visit(const koopa_raw_value_t &value)
         }
         present_value=old_value;
         return value_map[value];
-
     }
 
     const auto &kind=value->kind;
@@ -116,7 +152,20 @@ Reg Visit(const koopa_raw_value_t &value)
         case KOOPA_RVT_INTEGER:
             result_var=Visit(kind.data.integer);
             break;
-        
+        case KOOPA_RVT_ALLOC:
+            result_var.reg_offset = stack_top;
+            assert(value->ty->tag == KOOPA_RTT_POINTER);
+            stack_top += cal_size(value->ty->data.pointer.base);
+            value_map[value] = result_var;
+            break;
+        case KOOPA_RVT_LOAD:
+            result_var = Visit(kind.data.load);
+            value_map[value] = result_var;
+            assert(result_var.reg_name >= 0);
+            break;
+        case KOOPA_RVT_STORE:
+            Visit(kind.data.store);
+            break;
         default:
             ;
     }
@@ -215,6 +264,54 @@ Reg Visit(const koopa_raw_integer_t &integer)
     return result_var;
 }
 
+Reg Visit(const koopa_raw_load_t &load)
+{
+    koopa_raw_value_t src = load.src;
+    
+    if (value_map[src].reg_name >= 0) return value_map[src];
+    int reg_name = find_reg(1), reg_offset = value_map[src].reg_offset;
+    struct Reg result_var = {reg_name, reg_offset};
+    if (reg_offset >= -2048 && reg_offset <= 2047)
+        std::cout << " lw    " << reg_names[reg_name] << ", " << reg_offset << "(sp)" << std::endl;
+    else
+    {
+        std::cout << " li    s11, " << reg_offset << std::endl;
+        std::cout << " add   s11, s11, sp" << std::endl;
+        std::cout << " lw    " << reg_names[reg_name] << ", (s11)" << std::endl;
+    }
+    return result_var;
+}
+
+void Visit(const koopa_raw_store_t &store)
+{
+    struct Reg value = Visit(store.value);
+    koopa_raw_value_t dest = store.dest;
+    assert(value.reg_name >= 0);
+    assert(value_map.count(dest));
+    if (value_map[dest].reg_offset == -1)
+    {
+        value_map[dest].reg_offset = stack_top;
+        stack_top += 4;
+    }
+    else //清空过期的值
+        for (int i = 0; i < 16; i++)
+            if (i == value.reg_name) continue;
+            else if (reg_stats[i] > 0 && value_map[registers[i]].reg_offset == value_map[dest].reg_offset)
+            {
+                reg_stats[i] = 0;  
+                value_map[registers[i]].reg_name = value.reg_name;
+            }
+    int reg_name = value.reg_name, reg_offset = value_map[dest].reg_offset;
+    if (reg_offset >= -2048 && reg_offset <= 2047)
+        std::cout << " sw    " << reg_names[reg_name] << ", " << reg_offset << "(sp)" << std::endl;
+    else
+    {
+        std::cout << " li    s11, " << reg_offset << std::endl;
+        std::cout << " add   s11, s11, sp" << std::endl;
+        std::cout << " sw    " << reg_names[reg_name] << ", (s11)" << std::endl;
+    }
+}
+
 int find_reg(int stat)
 {
     for (int i = 0; i < 15; i++)
@@ -253,6 +350,18 @@ int find_reg(int stat)
     }
     assert(false);
     return -1;
+}
+
+int cal_size(const koopa_raw_type_t &ty)
+{
+    assert(ty->tag != KOOPA_RTT_UNIT);
+    if (ty->tag == KOOPA_RTT_ARRAY)
+    {
+        int prev = cal_size(ty->data.array.base);
+        int len = ty->data.array.len;
+        return len * prev;
+    }
+    return 4;
 }
 
 void parse_string(const char* str)
