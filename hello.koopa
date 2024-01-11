@@ -1,32 +1,18 @@
- .text
- .globl main
-main:
- addi  sp, sp, -80
- li    t0, 1
- add   t1, x0, t0
- li    t0, 1
- add   t2, x0, t0
- add   t0, t1, t2
- sw    t0, 0(sp)
- li    t3, 3
- add   t4, x0, t3
- li    t3, 2
- add   t5, x0, t3
- mul   t3, t4, t5
- sw    t3, 4(sp)
- li    t6, 8
- add   a0, x0, t6
- li    t6, 1
- add   a1, x0, t6
- li    t6, 6
- add   a2, x0, t6
- li    t6, 2
- add   a3, x0, t6
- div   t6, a2, a3
- sub   a4, t6, a1
- add   a5, a0, a4
- sw    a5, 8(sp)
- lw    a6, 0(sp)
- mv    a0, a6
- ret
-
+fun @main(): i32 {
+%entry:
+ @a_0 = alloc i32
+ %0 = add 0, 1
+ store %0, @a_0
+ @b_0 = alloc i32
+ %1 = add 0, 2
+ store %1, @b_0
+ @a_1 = alloc i32
+ %2 = add 0, 2
+ store %2, @a_1
+ %3 = load @a_1
+ %4 = load @b_0
+ %5 = add %3, %4
+ store %5, @b_0
+ %6 = load @b_0
+ ret %6
+}

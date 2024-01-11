@@ -12,7 +12,7 @@ enum class FuncFParamType { var, list };
 enum class UnaryExpType { primary, unary, func_call };
 enum class PrimaryExpType { exp, number, lval, list };
 enum class StmtType { if_, ifelse, simple, while_ };
-enum class SimpleStmtType { lval, exp, block, ret, break_, continue_, list };
+enum class SimpleStmtType { lval, exp, block, ret, break_, continue_, list,null };
 enum class DeclType { const_decl, var_decl };
 enum class ConstInitValType { const_exp, list };
 enum class BlockItemType { decl, stmt };
@@ -38,9 +38,9 @@ enum class InitValType { exp, list };
 #define Or 15
 #define NotEqualZero 16
 
-static std::map<std::string, int> const_val;
-static std::map<std::string, int> var_type;//是变量还是常量
-
+static std::vector<std::map<std::string, int>> symbol_tables;
+static std::vector<std::map<std::string, int>> var_types;
+static int level=-1;
 static int nowww=0;
 // 所有 AST 的基类
 class BaseAST {
@@ -87,10 +87,18 @@ class BlockAST : public BaseAST{
   public:
     std::vector<std::unique_ptr<BaseAST>> block_item_list;
     void Dump() const override {
-      std::cout<<"{"<<std::endl;
-      std::cout<<"%""entry:"<<std::endl;
+      level++;
+      std::map<std::string, int> symbol_table;
+      std::map<std::string, int> var_type;
+      symbol_tables.push_back(symbol_table);
+      var_types.push_back(var_type);
+      if(level==0) std::cout<<"{"<<std::endl;
+      if(level==0) std::cout<<"%""entry:"<<std::endl;
       for (auto&& block_item : block_item_list) block_item->Dump();
-      std::cout<<"}";
+      if(level==0) std::cout<<"}";
+      symbol_tables.pop_back();
+      var_types.pop_back();
+      level--;
 
   }
 };
@@ -108,6 +116,7 @@ class StmtAST : public BaseAST{
     SimpleStmtType type;
     std::unique_ptr<BaseAST> exp;
     std::unique_ptr<BaseAST> lval;
+    std::unique_ptr<BaseAST> block;
     void Dump() const override {
       if(type==SimpleStmtType::ret)
       {
@@ -118,6 +127,14 @@ class StmtAST : public BaseAST{
       {
         exp->Dump();
         lval->dump();
+      }
+      else if(type==SimpleStmtType::block)
+      {
+        block->Dump();
+      }
+      else if(type==SimpleStmtType::exp)
+      {
+        exp->Dump();
       }
     }
 };
@@ -468,14 +485,12 @@ class ConstDefAST :public BaseAST{
     std::string ident;
     std::unique_ptr<BaseAST> c_initval;
     int Calc()const override{
-      const_val[ident]=c_initval->Calc();
-
-
-      return const_val[ident];
+      symbol_tables[level][ident]=c_initval->Calc();
+      return symbol_tables[level][ident];
     }
     void Dump() const override
     {
-      var_type[ident]=0;
+      var_types[level][ident]=0;
       Calc();
     }
     
@@ -523,16 +538,17 @@ class VarDefAST : public BaseAST{
     std::unique_ptr<BaseAST> initval;
     void Dump() const override
     {
-      var_type[ident]=1;
-      std::cout<<" @"<<ident<<" = alloc i32"<<std::endl;
+      var_types[level][ident]=1;
+      std::cout<<" @"<<ident<<"_"<<level<<" = alloc i32"<<std::endl;
       if(ifhavev)
       {
         initval->Dump();
-        std::cout<<" store %"<<nowww-1<<", @"<<ident<<std::endl;
+        std::cout<<" store %"<<nowww-1<<", @"<<ident<<"_"<<level<<std::endl;
+        symbol_tables[level][ident]=initval->Calc();
       }
       else
       {
-        const_val[ident]=0;
+        symbol_tables[level][ident]=0;
       }
     }
 };
@@ -544,6 +560,10 @@ class InitValAST : public BaseAST{
     {
       exp->Dump();
     }
+    int Calc() const override
+    {
+      return exp->Calc();
+    }
 };
 
 class LValAST : public BaseAST{
@@ -551,18 +571,41 @@ class LValAST : public BaseAST{
     std::string ident;
     void Dump()const override
     {
-      if(var_type[ident]==0)
-        std::cout<<" %"<<nowww<<" = add "<<"0 ,"<<const_val[ident]<<std::endl;
-      else 
-        std::cout<<" %"<<nowww<<" = load "<<"@"<<ident<<std::endl;
-      nowww++;
+      for (int i=level;i>=0;--i)
+      {
+        if(var_types[i].count(ident))
+        {
+          if(var_types[i][ident]==0)
+            std::cout<<" %"<<nowww<<" = add "<<"0 ,"<<symbol_tables[i][ident]<<std::endl;
+          else 
+            std::cout<<" %"<<nowww<<" = load "<<"@"<<ident<<"_"<<i<<std::endl; 
+          nowww++;
+          break;
+        }
+      }
     }
     int Calc() const override
     {
-      return const_val[ident];
+      int cal;
+      for (int i=level;i>=0;--i)
+      {
+        if(symbol_tables[i].count(ident))
+          { 
+            cal=symbol_tables[i][ident];
+            break;
+          }
+      }
+      return cal;
     }
     void dump()const override{
-      std::cout<<" store %"<<nowww-1<<", @"<<ident<<std::endl;
+      for (int i=level;i>=0;--i)
+      {
+        if(var_types[i].count(ident))
+          { 
+            std::cout<<" store %"<<nowww-1<<", @"<<ident<<"_"<<i<<std::endl;
+            break;
+          }
+      }
     }
 };
 
