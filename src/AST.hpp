@@ -42,6 +42,7 @@ static std::vector<std::map<std::string, int>> symbol_tables;
 static std::vector<std::map<std::string, int>> var_types;
 static int level=-1;
 static int nowww=0;
+static int if_else_num=0;
 // 所有 AST 的基类
 class BaseAST {
  public:
@@ -121,6 +122,54 @@ public:
     void Dump() const override { content->Dump(); }
     std::string Type() const override{
       return content->Type();
+    }
+};
+
+class ComplexStmtAST : public BaseAST{
+  public:
+    StmtType type;
+    std::unique_ptr<BaseAST> exp;
+    std::unique_ptr<BaseAST> if_stmt;
+    std::unique_ptr<BaseAST> else_stmt;
+    void Dump() const override{
+        if(type==StmtType::simple) exp->Dump();
+        else if(type==StmtType::if_)
+        {
+          exp->Dump();
+          std::string then_label = "\%then__" + std::to_string(if_else_num);
+          std::string end_label = "\%end__" + std::to_string(if_else_num++);
+          std::cout << " br %" << nowww-1 << ", " << then_label << ", " << end_label << std::endl;
+          std::cout << then_label << ":" << std::endl;
+          if_stmt->Dump();
+          if(if_stmt->Type()!="ret") std::cout << " jump " << end_label << std::endl;
+          std::cout << end_label << ":" << std::endl;
+        }
+        else if(type==StmtType::ifelse)
+        {
+          exp->Dump();
+          std::string then_label = "\%then__" + std::to_string(if_else_num);
+          std::string else_label = "\%else__" + std::to_string(if_else_num);
+          std::string end_label = "\%end__" + std::to_string(if_else_num++);
+          std::cout << " br %" << nowww-1 << ", " << then_label << ", " << else_label << std::endl;
+          std::cout << then_label << ":" << std::endl;
+          if_stmt->Dump();
+          if(if_stmt->Type()!="ret") std::cout << " jump " << end_label << std::endl;
+          std::cout << else_label << ":" << std::endl;
+          else_stmt->Dump();
+          if(else_stmt->Type()!="ret") std::cout << " jump " << end_label << std::endl;
+          std::cout << end_label << ":" << std::endl;
+          if(if_stmt->Type()!="ret"||else_stmt->Type()!="ret")
+            std::cout << end_label << ":" << std::endl;
+        }
+    }
+    std::string Type() const override{
+      if(type==StmtType::simple) return exp->Type();
+      else if(type==StmtType::if_) return "notret";
+      else if(type==StmtType::ifelse){
+        if(if_stmt->Type()=="ret"&&else_stmt->Type()=="ret")
+          return "ret";
+        else return "notret";
+      }
     }
 };
 

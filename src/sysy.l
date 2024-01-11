@@ -57,6 +57,9 @@ Hexadecimal   0[xX][0-9a-fA-F]+
 "<"             { return LQ; }
 ">"             { return GQ; }
 
+"if"            { return IF; }
+"else"          { return ELSE; }
+
 .               { return yytext[0]; }
 
 %%

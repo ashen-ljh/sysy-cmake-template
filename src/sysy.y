@@ -38,13 +38,14 @@ using namespace std;
 
 // lexer 返回的所有 token 种类的声明
 // 注意 IDENT 和 INT_CONST 会返回 token 的值, 分别对应 str_val 和 int_val
-%token INT RETURN LOR LAND EQ NEQ GEQ LEQ LQ GQ CONST
+%token INT RETURN LOR LAND EQ NEQ GEQ LEQ LQ GQ CONST IF ELSE
 %token <str_val> IDENT
 %token <int_val> INT_CONST
 
 // 非终结符的类型定义
 %type <ast_val> FuncDef FuncType Block Stmt Number PrimaryExp Exp UnaryExp MulExp AddExp LOrExp RelExp EqExp LAndExp
-%type <ast_val> BlockItem Decl LVal ConstDecl ConstDef ConstInitVal ConstExp VarDecl VarDef InitVal 
+%type <ast_val> BlockItem Decl LVal ConstDecl ConstDef ConstInitVal ConstExp VarDecl VarDef InitVal ComplexStmt
+%type <ast_val> OpenStmt ClosedStmt
 %type <int_val> UnaryOp
 %type <vec_val> BlockItemList ConstDefList VarDefList
 %type <str_val> Type 
@@ -108,7 +109,7 @@ BlockItem
       ast->type = BlockItemType::decl;
       ast->content = unique_ptr<BaseAST>($1);
       $$ = ast;
-  }|Stmt {
+  }|ComplexStmt {
      auto ast = new BlockItemAST();
      ast->type = BlockItemType::stmt;
      ast->content = unique_ptr<BaseAST>($1);
@@ -126,6 +127,51 @@ BlockItemList
         $$ = v;
     }
     ;
+
+ComplexStmt
+  : OpenStmt{
+    auto ast= ($1);
+    $$=ast;
+  }|ClosedStmt{
+    auto ast= ($1);
+    $$=ast;
+  }
+  ;
+
+ClosedStmt
+  : Stmt{
+      auto ast=new ComplexStmtAST();
+      ast->type=StmtType::simple;
+      ast->exp=unique_ptr<BaseAST>($1);
+      $$=ast;
+  }|IF '(' Exp ')' ClosedStmt ELSE ClosedStmt{
+      auto ast=new ComplexStmtAST();
+      ast->type=StmtType::ifelse;
+      ast->exp=unique_ptr<BaseAST>($3);
+      ast->if_stmt=unique_ptr<BaseAST>($5);
+      ast->else_stmt=unique_ptr<BaseAST>($7);
+      $$=ast;
+  }
+  ;
+  
+OpenStmt
+  : IF '(' Exp ')' ComplexStmt{
+      auto ast=new ComplexStmtAST();
+      ast->type = StmtType::if_;
+      ast->exp=unique_ptr<BaseAST>($3);
+      ast->if_stmt= unique_ptr<BaseAST>($5);
+      $$=ast;
+  }|IF '(' Exp ')' ClosedStmt ELSE OpenStmt{
+      auto ast=new ComplexStmtAST();
+      ast->type=StmtType::ifelse;
+      ast->exp=unique_ptr<BaseAST>($3);
+      ast->if_stmt=unique_ptr<BaseAST>($5);
+      ast->else_stmt=unique_ptr<BaseAST>($7);
+      $$=ast;
+  }
+  ;
+
+
 
 Stmt
   : RETURN Exp ';' {
