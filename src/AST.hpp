@@ -49,6 +49,7 @@ class BaseAST {
   virtual void Dump() const = 0;
   virtual int Calc() const { assert(false); return -1; }
   virtual void dump() const { assert(false); return ;}
+  virtual std::string Type() const { assert(false); return ""; }
 };
 
 // CompUnit 是 BaseAST
@@ -94,12 +95,21 @@ class BlockAST : public BaseAST{
       var_types.push_back(var_type);
       if(level==0) std::cout<<"{"<<std::endl;
       if(level==0) std::cout<<"%""entry:"<<std::endl;
-      for (auto&& block_item : block_item_list) block_item->Dump();
+      for (auto&& block_item : block_item_list) 
+      {
+        block_item->Dump();
+        if(block_item->Type()=="ret") break;
+      }
       if(level==0) std::cout<<"}";
       symbol_tables.pop_back();
       var_types.pop_back();
       level--;
-
+  }
+  std::string Type() const override{
+    for (auto&& block_item : block_item_list)
+      if(block_item->Type()=="ret")
+        return "ret";
+    return "notret";    
   }
 };
 
@@ -109,6 +119,9 @@ public:
     BlockItemType type;
     std::unique_ptr<BaseAST> content;
     void Dump() const override { content->Dump(); }
+    std::string Type() const override{
+      return content->Type();
+    }
 };
 
 class StmtAST : public BaseAST{
@@ -136,6 +149,11 @@ class StmtAST : public BaseAST{
       {
         exp->Dump();
       }
+    }
+    std::string Type() const override{
+      if(type==SimpleStmtType::ret) return "ret";
+      else if(type==SimpleStmtType::block) return block->Type();
+      else return "notret";
     }
 };
 
@@ -466,6 +484,9 @@ class DeclAST : public BaseAST{
     std::unique_ptr<BaseAST> decl;
     void Dump()const override{
       decl->Dump();
+    }
+    std::string Type() const override{
+      return "notret";
     }
 };
 

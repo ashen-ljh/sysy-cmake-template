@@ -1,8 +1,9 @@
 int main() {
-  int a = 1, b = 2;
+  int a = 1;
   {
-    int a = 2;
-    b = b + a;
+    a = 2;
+    int a = 3;
+    return a;
   }
-  return b;
+  return a;
 }
