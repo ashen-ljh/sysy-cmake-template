@@ -1,8 +1,15 @@
 fun @main(): i32 {
 %entry:
  @a_0 = alloc i32
- %0 = add 0, 3
+ %0 = add 0, 2
  store %0, @a_0
  %1 = load @a_0
- ret %1
+ br %1, %then__0, %end__0
+%then__0:
+ %2 = add 0, 5
+ store %2, @a_0
+ jump %end__0
+%end__0:
+ %3 = load @a_0
+ ret %3
 }
