@@ -157,7 +157,6 @@ class ComplexStmtAST : public BaseAST{
           std::cout << else_label << ":" << std::endl;
           else_stmt->Dump();
           if(else_stmt->Type()!="ret") std::cout << " jump " << end_label << std::endl;
-          std::cout << end_label << ":" << std::endl;
           if(if_stmt->Type()!="ret"||else_stmt->Type()!="ret")
             std::cout << end_label << ":" << std::endl;
         }
