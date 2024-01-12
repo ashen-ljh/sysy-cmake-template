@@ -40,9 +40,11 @@ enum class InitValType { exp, list };
 
 static std::vector<std::map<std::string, int>> symbol_tables;
 static std::vector<std::map<std::string, int>> var_types;
+static std::vector<int> while_stack;
 static int level=-1;
 static int nowww=0;
 static int if_else_num=0;
+static int while_num=0;
 // 所有 AST 的基类
 class BaseAST {
  public:
@@ -99,7 +101,7 @@ class BlockAST : public BaseAST{
       for (auto&& block_item : block_item_list) 
       {
         block_item->Dump();
-        if(block_item->Type()=="ret") break;
+        if(block_item->Type()=="ret"||block_item->Type()=="break"||block_item->Type()=="cont") break;
       }
       if(level==0) std::cout<<"}";
       symbol_tables.pop_back();
@@ -110,7 +112,11 @@ class BlockAST : public BaseAST{
     for (auto&& block_item : block_item_list)
       if(block_item->Type()=="ret")
         return "ret";
-    return "notret";    
+      else if(block_item->Type()=="break")
+        return "break";
+      else if(block_item->Type()=="cont")
+        return "cont";
+    return "not";    
   }
 };
 
@@ -131,6 +137,7 @@ class ComplexStmtAST : public BaseAST{
     std::unique_ptr<BaseAST> exp;
     std::unique_ptr<BaseAST> if_stmt;
     std::unique_ptr<BaseAST> else_stmt;
+    std::unique_ptr<BaseAST> while_stmt;
     void Dump() const override{
         if(type==StmtType::simple) exp->Dump();
         else if(type==StmtType::if_)
@@ -141,7 +148,7 @@ class ComplexStmtAST : public BaseAST{
           std::cout << " br %" << nowww-1 << ", " << then_label << ", " << end_label << std::endl;
           std::cout << then_label << ":" << std::endl;
           if_stmt->Dump();
-          if(if_stmt->Type()!="ret") std::cout << " jump " << end_label << std::endl;
+          if(if_stmt->Type()!="ret"&&if_stmt->Type()!="break"&&if_stmt->Type()!="cont") std::cout << " jump " << end_label << std::endl;
           std::cout << end_label << ":" << std::endl;
         }
         else if(type==StmtType::ifelse)
@@ -153,22 +160,41 @@ class ComplexStmtAST : public BaseAST{
           std::cout << " br %" << nowww-1 << ", " << then_label << ", " << else_label << std::endl;
           std::cout << then_label << ":" << std::endl;
           if_stmt->Dump();
-          if(if_stmt->Type()!="ret") std::cout << " jump " << end_label << std::endl;
+          if(if_stmt->Type()!="ret"&&if_stmt->Type()!="break"&&if_stmt->Type()!="cont") std::cout << " jump " << end_label << std::endl;
           std::cout << else_label << ":" << std::endl;
           else_stmt->Dump();
-          if(else_stmt->Type()!="ret") std::cout << " jump " << end_label << std::endl;
-          if(if_stmt->Type()!="ret"||else_stmt->Type()!="ret")
+          if(else_stmt->Type()!="ret"&&else_stmt->Type()!="break"&&else_stmt->Type()!="cont") std::cout << " jump " << end_label << std::endl;
+          if(!((if_stmt->Type()=="ret"||if_stmt->Type()=="break"||if_stmt->Type()=="cont")&&(else_stmt->Type()=="ret"||else_stmt->Type()=="break"||else_stmt->Type()=="cont")))
             std::cout << end_label << ":" << std::endl;
+        }
+        else if(type==StmtType::while_)
+        {
+          std::string entry_label = "\%while__" + std::to_string(while_num);
+          std::string body_label = "\%do__" + std::to_string(while_num);
+          std::string end_label = "\%while_end__" + std::to_string(while_num);
+          while_stack.push_back(while_num++);
+          std::cout << " jump " << entry_label << std::endl;
+          std::cout << entry_label << ":" << std::endl;
+          exp->Dump();
+          std::cout << " br %" << nowww-1 << ", " << body_label << ", " << end_label << std::endl;
+          std::cout << body_label << ":" << std::endl;
+          while_stmt->Dump();
+          if (while_stmt->Type() != "ret" && while_stmt->Type() != "break" && while_stmt->Type() != "cont")
+            std::cout << " jump " << entry_label << std::endl;
+          std::cout << end_label << ":" << std::endl;
+          while_stack.pop_back();
         }
     }
     std::string Type() const override{
       if(type==StmtType::simple) return exp->Type();
-      else if(type==StmtType::if_) return "notret";
+      else if(type==StmtType::if_) return "not";
       else if(type==StmtType::ifelse){
-        if(if_stmt->Type()=="ret"&&else_stmt->Type()=="ret")
+        if((if_stmt->Type()=="ret"||if_stmt->Type()=="break"||if_stmt->Type()=="cont")&&(else_stmt->Type()=="ret"||else_stmt->Type()=="break"||else_stmt->Type()=="cont"))
           return "ret";
-        else return "notret";
+        else return "not";
       }
+      else if(type==StmtType::while_) return "not";
+      
     }
 };
 
@@ -197,11 +223,27 @@ class StmtAST : public BaseAST{
       {
         exp->Dump();
       }
+      else if(type==SimpleStmtType::break_)
+      {
+        assert(!while_stack.empty());
+        int while_no = while_stack.back();
+        std::string end_label = "\%while_end__" + std::to_string(while_no);
+        std::cout << " jump " << end_label << std::endl;
+      }
+      else if(type==SimpleStmtType::continue_)
+      {
+        assert(!while_stack.empty());
+        int while_no = while_stack.back();
+        std::string entry_label = "\%while__" + std::to_string(while_no);
+        std::cout << " jump " << entry_label << std::endl;
+      }
     }
     std::string Type() const override{
       if(type==SimpleStmtType::ret) return "ret";
       else if(type==SimpleStmtType::block) return block->Type();
-      else return "notret";
+      else if(type==SimpleStmtType::break_) return "break";
+      else if(type==SimpleStmtType::continue_) return "cont";
+      else return "not";
     }
 };
 

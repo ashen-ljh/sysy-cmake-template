@@ -1,30 +1,12 @@
- .text
- .globl main
-main:
- addi  sp, sp, -16
- addi  sp, sp, -32
- addi  sp, sp, -48
- addi  sp, sp, -64
-entry:
- li    t0, 2
- add   t1, x0, t0
- sw    t1, 0(sp)
- lw    t0, 0(sp)
- bnez  t0, then__0
- j     else__0
-then__0:
- li    t0, 1
- add   t1, x0, t0
- lw    t0, 0(sp)
- add   t2, t1, t0
- sw    t2, 0(sp)
- j     end__0
-else__0:
- add   t0, x0, x0
- sw    t0, 0(sp)
- j     end__0
-end__0:
- lw    t0, 0(sp)
- mv    a0, t0
- ret
-
+fun @main(): i32 {
+%entry:
+ jump %while__0
+%while__0:
+ %0 = add 0, 1
+ br 0, %do__0, %while_end__0
+%do__0:
+ jump %while_end__0
+%while_end__0:
+ %1 = add 0, 0
+ ret %1
+}

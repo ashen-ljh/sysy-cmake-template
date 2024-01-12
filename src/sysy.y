@@ -38,7 +38,7 @@ using namespace std;
 
 // lexer 返回的所有 token 种类的声明
 // 注意 IDENT 和 INT_CONST 会返回 token 的值, 分别对应 str_val 和 int_val
-%token INT RETURN LOR LAND EQ NEQ GEQ LEQ LQ GQ CONST IF ELSE
+%token INT RETURN LOR LAND EQ NEQ GEQ LEQ LQ GQ CONST IF ELSE WHILE BREAK CONTINUE
 %token <str_val> IDENT
 %token <int_val> INT_CONST
 
@@ -134,6 +134,12 @@ ClosedStmt
       ast->else_stmt=unique_ptr<BaseAST>($7);
       cout<<"ClosedStmt:ifelse"<<endl;
       $$=ast;
+  }|WHILE '(' Exp ')' ClosedStmt{
+      auto ast=new ComplexStmtAST();
+      ast->type=StmtType::while_;
+      ast->exp=unique_ptr<BaseAST>($3);
+      ast->while_stmt=unique_ptr<BaseAST>($5);
+      $$=ast;
   }
   ;
   
@@ -152,6 +158,12 @@ OpenStmt
       ast->if_stmt=unique_ptr<BaseAST>($5);
       ast->else_stmt=unique_ptr<BaseAST>($7);
       cout<<"OpenStmt:ifelse"<<endl;
+      $$=ast;
+  }|WHILE '(' Exp ')' OpenStmt{
+      auto ast=new ComplexStmtAST();
+      ast->type=StmtType::while_;
+      ast->exp=unique_ptr<BaseAST>($3);
+      ast->while_stmt=unique_ptr<BaseAST>($5);
       $$=ast;
   }
   ;
@@ -184,14 +196,14 @@ Stmt
     auto ast=new StmtAST();
     ast->type=SimpleStmtType::null;
     $$=ast;
-  }
-  ;
-
-Number
-  : INT_CONST {
-    auto ast=new NumberAST();
-    ast->num=$1;
-    $$ = ast;
+  }|BREAK ';'{
+      auto ast=new StmtAST();
+      ast->type=SimpleStmtType::break_;
+      $$=ast;
+  }|CONTINUE ';'{
+      auto ast=new StmtAST();
+      ast->type=SimpleStmtType::continue_;
+      $$=ast;
   }
   ;
 
