@@ -28,10 +28,13 @@ Reg Visit(const koopa_raw_binary_t &binary);
 Reg Visit(const koopa_raw_integer_t &integer);
 Reg Visit(const koopa_raw_load_t &load);
 void Visit(const koopa_raw_store_t &store);
+void Visit(const koopa_raw_branch_t &branch);
+void Visit(const koopa_raw_jump_t &jump);
 
 
 int find_reg(int stat);
 int cal_size(const koopa_raw_type_t &ty);
+void clear_registers(bool save_temps = true);
 
 void Visit(const koopa_raw_program_t &program)
 {
@@ -108,7 +111,7 @@ void Visit(const koopa_raw_function_t &func)
 
 void Visit(const koopa_raw_basic_block_t &bb)
 {
-    //std::cout<<bb->name+1<<":"<<std::endl;
+    std::cout<<bb->name+1<<":"<<std::endl;
     Visit(bb->insts);
 }
 
@@ -166,6 +169,12 @@ Reg Visit(const koopa_raw_value_t &value)
         case KOOPA_RVT_STORE:
             Visit(kind.data.store);
             break;
+        case KOOPA_RVT_BRANCH:
+            Visit(kind.data.branch);
+            break;
+        case KOOPA_RVT_JUMP:
+            Visit(kind.data.jump);
+            break;
         default:
             ;
     }
@@ -184,6 +193,7 @@ void Visit(const koopa_raw_return_t &ret)
             std::cout << " mv    a0, " << reg_names[result_var.reg_name] <<
                 std::endl;
     }
+    
     std::cout << " ret" << std::endl;
 }
 
@@ -312,6 +322,23 @@ void Visit(const koopa_raw_store_t &store)
     }
 }
 
+void Visit(const koopa_raw_branch_t &branch)
+{
+    std::string true_label=branch.true_bb->name+1;
+    std::string false_label=branch.false_bb->name+1;
+    int judge_reg=Visit(branch.cond).reg_name;
+    clear_registers(false);
+    std::cout << " bnez  " << reg_names[judge_reg] << ", " << true_label << std::endl;
+    std::cout << " j     " << false_label << std::endl;
+}
+
+void Visit(const koopa_raw_jump_t &jump)
+{
+    clear_registers(false);
+    std::string target_label = jump.target->name + 1;
+    std::cout << " j     " << target_label << std::endl;
+}
+
 int find_reg(int stat)
 {
     for (int i = 0; i < 15; i++)
@@ -362,6 +389,36 @@ int cal_size(const koopa_raw_type_t &ty)
         return len * prev;
     }
     return 4;
+}
+
+void clear_registers(bool save_temps)
+{
+    for (int i = 0; i < 15; i++)
+        if (reg_stats[i] > 0)
+        {
+            value_map[registers[i]].reg_name = -1;
+            int offset = value_map[registers[i]].reg_offset;
+            if (offset == -1)
+            {
+                offset = stack_top;
+                stack_top += 4;
+                value_map[registers[i]].reg_offset = offset;
+                if (save_temps)
+                {
+                    if (offset >= -2048 && offset <= 2047)
+                        std::cout << "\tsw    " << reg_names[i] << ", " <<
+                            offset << "(sp)" << std::endl;
+                    else
+                    {
+                        std::cout << "\tli    s11, " << offset << std::endl;
+                        std::cout << "\tadd   s11, s11, sp" << std::endl;
+                        std::cout << "\tsw    " << reg_names[i] << ", (s11)" <<
+                            std::endl;
+                    }
+                }
+            }
+            reg_stats[i] = 0;
+        }
 }
 
 void parse_string(const char* str)
