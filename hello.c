@@ -11,7 +11,7 @@ int xx(int x,int y,int z )
 int x=2;
 void f() {}
 
-int main(int a) {
+int main() {
   f();
   int b= xx(1,2,3);
   return half(10,a,5)+b;
