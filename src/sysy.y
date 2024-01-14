@@ -38,16 +38,16 @@ using namespace std;
 
 // lexer 返回的所有 token 种类的声明
 // 注意 IDENT 和 INT_CONST 会返回 token 的值, 分别对应 str_val 和 int_val
-%token INT RETURN LOR LAND EQ NEQ GEQ LEQ LQ GQ CONST IF ELSE WHILE BREAK CONTINUE
+%token INT VOID RETURN LOR LAND EQ NEQ GEQ LEQ LQ GQ CONST IF ELSE WHILE BREAK CONTINUE
 %token <str_val> IDENT
 %token <int_val> INT_CONST
 
 // 非终结符的类型定义
-%type <ast_val> FuncDef FuncType Block Stmt Number PrimaryExp Exp UnaryExp MulExp AddExp LOrExp RelExp EqExp LAndExp
+%type <ast_val> FuncDef Block Stmt Number PrimaryExp Exp UnaryExp MulExp AddExp LOrExp RelExp EqExp LAndExp
 %type <ast_val> BlockItem Decl LVal ConstDecl ConstDef ConstInitVal ConstExp VarDecl VarDef InitVal ComplexStmt
-%type <ast_val> OpenStmt ClosedStmt
+%type <ast_val> OpenStmt ClosedStmt  FuncFParam CompUnitList
 %type <int_val> UnaryOp
-%type <vec_val> BlockItemList ConstDefList VarDefList
+%type <vec_val> BlockItemList ConstDefList VarDefList FuncFParams FuncRParms  
 %type <str_val> Type 
 %%
 
@@ -57,11 +57,33 @@ using namespace std;
 // 此时我们应该把 FuncDef 返回的结果收集起来, 作为 AST 传给调用 parser 的函数
 // $1 指代规则里第一个符号的返回值, 也就是 FuncDef 的返回值
 CompUnit
-  : FuncDef {
-    auto comp_unit=make_unique<CompUnitAST>();
-    comp_unit->func_def=unique_ptr<BaseAST>($1);
-    ast = move(comp_unit);
-    cout<<"CompUnit"<<endl;
+  : CompUnitList{
+      auto comp_unit=unique_ptr<BaseAST>($1);
+      ast=move(comp_unit);
+  } 
+  ;
+
+CompUnitList
+  : FuncDef{
+      auto ast=new CompUnitAST();
+      auto func_def=unique_ptr<BaseAST>($1);
+      ast->func_def_list.push_back(move(func_def));
+      $$=ast;
+  }|Decl{
+      auto ast=new CompUnitAST();
+      auto decl=unique_ptr<BaseAST>($1);
+      ast->decl_list.push_back(move(decl));
+      $$=ast;
+  }|CompUnitList FuncDef{
+      auto ast=(CompUnitAST*)($1);
+      auto func_def=unique_ptr<BaseAST>($2);
+      ast->func_def_list.push_back(move(func_def));
+      $$=ast;
+  }|CompUnitList Decl{
+      auto ast=(CompUnitAST*)($1);
+      auto decl=unique_ptr<BaseAST>($2);
+      ast->decl_list.push_back(move(decl));
+      $$=ast;
   }
   ;
 
@@ -76,25 +98,62 @@ CompUnit
 // 虽然此处你看不出用 unique_ptr 和手动 delete 的区别, 但当我们定义了 AST 之后
 // 这种写法会省下很多内存管理的负担
 FuncDef
-  : FuncType IDENT '(' ')' Block {
+  : Type IDENT '(' ')' Block {
     auto ast=new FuncDefAST();
-    ast->func_type = unique_ptr<BaseAST>($1);
+    ast->func_type = *unique_ptr<string>($1);
     ast->ident = *unique_ptr<string>($2);
     ast->block = unique_ptr<BaseAST>($5);
     cout<<"FuncDef"<<endl;
     $$ = ast;
+  }|Type IDENT '(' FuncFParams ')' Block{
+    auto ast=new FuncDefAST();
+    ast->func_type = *unique_ptr<string>($1);
+    ast->ident = *unique_ptr<string>($2);
+    vector<unique_ptr<BaseAST>> *v_ptr = ($4);
+    for (auto it = v_ptr->begin(); it != v_ptr->end(); it++)
+      ast->params.push_back(move(*it));
+    ast->block = unique_ptr<BaseAST>($6);
+    cout<<"FuncDef"<<endl;
+    ((BlockAST*)(ast->block).get())->func = ast->ident;
+    $$ = ast;
+  }
+  ;
+
+FuncFParams
+  : FuncFParam{
+      vector<unique_ptr<BaseAST>> *v = new vector<unique_ptr<BaseAST>>;
+      v->push_back(unique_ptr<BaseAST>($1));
+      $$ = v;
+  }| FuncFParams ',' FuncFParam{
+      vector<unique_ptr<BaseAST>> *v = ($1);
+      v->push_back(unique_ptr<BaseAST>($3));
+      $$ = v;
+  }
+  ;
+
+FuncFParam
+  : Type IDENT{
+      auto ast = new FuncFParamAST();
+      ast->type = FuncFParamType::var;
+      ast->b_type = *unique_ptr<string>($1);
+      ast->ident = *unique_ptr<string>($2);
+      $$ = ast;
+  }
+  ;
+
+FuncRParms
+  : Exp{
+      vector<unique_ptr<BaseAST>> *v = new vector<unique_ptr<BaseAST>>;
+      v->push_back(unique_ptr<BaseAST>($1));
+      $$ = v;
+  }|FuncRParms ',' Exp{
+      vector<unique_ptr<BaseAST>> *v = ($1);
+      v->push_back(unique_ptr<BaseAST>($3));
+      $$ = v;
   }
   ;
 
 // 同上, 不再解释
-FuncType
-  : INT {
-    auto ast=new FuncTypeAST();
-    ast->type="int";
-    cout<<"FuncType"<<endl;
-    $$ = ast;
-  }
-  ;
 
 Block
   : '{' BlockItemList '}' {
@@ -176,6 +235,8 @@ Stmt
     ast->type = SimpleStmtType::ret;
     ast->exp = unique_ptr<BaseAST>($2);
     $$ = ast;
+  }|RETURN ';'{
+
   }|LVal '=' Exp ';'{
     auto ast = new StmtAST();
     ast->type = SimpleStmtType::lval;
@@ -350,13 +411,28 @@ LOrExp
   UnaryExp
   : PrimaryExp{
       auto ast=new UnaryExpAST();
+      ast->type=UnaryExpType::primary;
       ast->pu_exp=unique_ptr<BaseAST>($1);
       ast->op=-1;
       $$=ast;
   }|UnaryOp UnaryExp{
       auto ast=new UnaryExpAST();
+      ast->type=UnaryExpType::unary;
       ast->pu_exp=unique_ptr<BaseAST>($2);
       ast->op=$1;
+      $$=ast;
+  }|IDENT '(' FuncRParms ')' {
+      auto ast=new UnaryExpAST();
+      ast->type=UnaryExpType::func_call;
+      vector<unique_ptr<BaseAST>> *v_ptr = ($3);
+      ast->ident=*unique_ptr<string>($1);
+      for (auto it = v_ptr->begin(); it != v_ptr->end(); it++)
+        ast->params.push_back(move(*it));
+      $$=ast;
+  }|IDENT '(' ')'{
+      auto ast=new UnaryExpAST();
+      ast->type=UnaryExpType::func_call;
+      ast->ident=*unique_ptr<string>($1);
       $$=ast;
   }
   ;
@@ -546,6 +622,9 @@ Type
   : INT{
     string *type = new string("int");
     $$ = type;
+  }|VOID{
+    string *type=new string("void");
+    $$=type;
   }
   ;
 

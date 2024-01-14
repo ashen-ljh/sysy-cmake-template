@@ -1,4 +1,7 @@
+int var;
+
+const int one = 1;
+
 int main() {
-  while (1) break;
-  return 0;
+  return var + one;
 }

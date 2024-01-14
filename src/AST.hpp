@@ -40,11 +40,20 @@ enum class InitValType { exp, list };
 
 static std::vector<std::map<std::string, int>> symbol_tables;
 static std::vector<std::map<std::string, int>> var_types;
+static std::map<std::string, std::string> function_table; 
+static std::map<std::string, std::string> function_ret_type;
+static std::map<std::string, int> function_param_num;  
 static std::vector<int> while_stack;
-static int level=-1;
+static int level=0;
 static int nowww=0;
 static int if_else_num=0;
 static int while_num=0;
+static std::map<std::string, std::vector<std::string>> function_param_idents;
+static std::map<std::string, std::vector<std::string>> function_param_names;
+static std::map<std::string, std::vector<std::string>> function_param_types;
+static std::string present_func_type;
+
+static int func_num=0;
 // 所有 AST 的基类
 class BaseAST {
  public:
@@ -53,57 +62,149 @@ class BaseAST {
   virtual int Calc() const { assert(false); return -1; }
   virtual void dump() const { assert(false); return ;}
   virtual std::string Type() const { assert(false); return ""; }
+  virtual std::string get_ident() const { assert(false); return ""; }
 };
 
 // CompUnit 是 BaseAST
 class CompUnitAST : public BaseAST {
  public:
   // 用智能指针管理对象
-  std::unique_ptr<BaseAST> func_def;
+  std::vector<std::unique_ptr<BaseAST>> func_def_list;
+  std::vector<std::unique_ptr<BaseAST>> decl_list;
   void Dump() const override {
-    std::cout << "fun @";
-    func_def->Dump();
+    std::cout << "decl @getint(): i32" << std::endl;
+    std::cout << "decl @getch(): i32" << std::endl;
+    std::cout << "decl @getarray(*i32): i32" << std::endl;
+    std::cout << "decl @putint(i32)" << std::endl;
+    std::cout << "decl @putch(i32)" << std::endl;
+    std::cout << "decl @putarray(i32, *i32)" << std::endl;
+    std::cout << "decl @starttime()" << std::endl;
+    std::cout << "decl @stoptime()" << std::endl << std::endl;
+    function_table["getint"] = "@getint";
+    function_table["getch"] = "@getch";
+    function_table["getarray"] = "@getarray";
+    function_table["putint"] = "@putint";
+    function_table["putch"] = "@putch";
+    function_table["putarray"] = "@putarray";
+    function_table["starttime"] = "@starttime";
+    function_table["stoptime"] = "@stoptime";
+    function_ret_type["getint"] = "int";
+    function_ret_type["getch"] = "int";
+    function_ret_type["getarray"] = "int";
+    function_ret_type["putint"] = "void";
+    function_ret_type["putch"] = "void";
+    function_ret_type["putarray"] = "void";
+    function_ret_type["starttime"] = "void";
+    function_ret_type["stoptime"] = "void";
+    function_param_num["getint"] = 0;
+    function_param_num["getch"] = 0;
+    function_param_num["getarray"] = 1;
+    function_param_num["putint"] = 1;
+    function_param_num["putch"] = 1;
+    function_param_num["putarray"] = 2;
+    function_param_num["starttime"] = 0;
+    function_param_num["stoptime"] = 0;
+    std::map<std::string, int> global_syms;
+    std::map<std::string, int> global_var_type;
+    symbol_tables.push_back(global_syms);
+    var_types.push_back(global_var_type);
+    for (auto&& decl : decl_list) decl->Dump();
+      std::cout << std::endl;
+    for (auto&& func_def : func_def_list)func_def->Dump();
+    symbol_tables.pop_back();
+    var_types.pop_back();
   }
+};
+
+class FuncFParamAST : public BaseAST{
+  public:
+    FuncFParamType type;
+    std::string b_type;
+    std::string ident;
+    void Dump() const override{
+      assert(b_type == "int");
+      std::string param_name="@"+ident;
+      std::string name=param_name+"_"+std::to_string(func_num)+"_"+std::to_string(level);
+      std::cout<<name;
+    }
+    std::string get_ident() const override{
+      return ident;
+    }
+    std::string Type() const override{
+      return "i32";
+    }
 };
 
 // FuncDef 也是 BaseAST
 class FuncDefAST : public BaseAST {
  public:
-  std::unique_ptr<BaseAST> func_type;
+  std::string func_type;
   std::string ident;
   std::unique_ptr<BaseAST> block;
+  std::vector<std::unique_ptr<BaseAST> > params;
   void Dump() const override {
-    std::cout << ident<<"(): ";
-    func_type->Dump();
+    func_num++;
+    std::string name = "@" + ident;
+    function_table[ident] = name;
+    function_ret_type[ident] = func_type;
+    function_param_num[ident] = params.size();
+    present_func_type = function_ret_type[ident];
+    std::vector<std::string> idents, names, types;
+    std::cout << "fun @"<<ident<<"(";
+    for (int i = 0; i < params.size(); i++)
+    {
+      idents.push_back(params[i]->get_ident());
+      params[i]->Dump();
+      std::string param_name = "@" + idents.back()+"_"+std::to_string(func_num)+"_"+std::to_string(level);
+      names.push_back(param_name);
+      types.push_back(params[i]->Type());
+      std::cout << ": " << params[i]->Type();
+      if (i != params.size() - 1)std::cout << ", ";
+    }
+    function_param_idents[ident] = move(idents);
+    function_param_names[ident] = move(names);
+    function_param_types[ident] = move(types);
+    std::cout<<")";
+    if(func_type=="int") std::cout<<": i32 ";
     block->Dump();
-  }
-};
-
-class FuncTypeAST : public BaseAST{
-  public:
-    std::string type;
-    void Dump() const override {
-      std::cout<<"i32 ";
   }
 };
 
 class BlockAST : public BaseAST{
   public:
     std::vector<std::unique_ptr<BaseAST>> block_item_list;
+    std::string func="";
     void Dump() const override {
       level++;
       std::map<std::string, int> symbol_table;
       std::map<std::string, int> var_type;
+      
+      if(level==1) std::cout<<"{"<<std::endl;
+      if(level==1) std::cout<<"%""entry:"<<std::endl;
+      if (func != "")
+      {
+        std::vector<std::string> idents = function_param_idents[func];
+        std::vector<std::string> names = function_param_names[func];
+        std::vector<std::string> types = function_param_types[func];
+        for (int i = 0; i < names.size(); i++)
+        {
+          std::string ident = idents[i];
+          std::string name = names[i]; name[0] = '%';
+          symbol_table[ident] = func_num;
+          var_type[ident] = 2;
+          std::cout << " " << name << " = alloc ";
+          std::cout << types[i] << std::endl;
+          std::cout << " store " << names[i] << ", " << name << std::endl;
+        }
+      }
       symbol_tables.push_back(symbol_table);
       var_types.push_back(var_type);
-      if(level==0) std::cout<<"{"<<std::endl;
-      if(level==0) std::cout<<"%""entry:"<<std::endl;
       for (auto&& block_item : block_item_list) 
       {
         block_item->Dump();
         if(block_item->Type()=="ret"||block_item->Type()=="break"||block_item->Type()=="cont") break;
       }
-      if(level==0) std::cout<<"}";
+      if(level==1) std::cout<<"}"<<std::endl;
       symbol_tables.pop_back();
       var_types.pop_back();
       level--;
@@ -532,18 +633,44 @@ class MulExpAST : public BaseAST{
 
 class UnaryExpAST : public BaseAST{
   public:
+    UnaryExpType type;
     std::unique_ptr<BaseAST> pu_exp;
+    std::string ident;
+    std::vector<std::unique_ptr<BaseAST> > params;
     int op;
     void Dump()const override{
-      if(op==-1||op==NoOperation) pu_exp->Dump();
-      else if(op==Invert){
-        pu_exp->Dump();
-        std::cout<<" %"<<nowww<<" = sub 0, %"<<nowww-1<<std::endl;
-        nowww++;
-      } 
-      else if(op==EqualZero){
-        pu_exp->Dump();
-        std::cout<<" %"<<nowww<<" = eq 0, %"<<nowww-1<<std::endl;
+      if(type!=UnaryExpType::func_call)
+      {
+        if(op==-1||op==NoOperation) pu_exp->Dump();
+        else if(op==Invert){
+          pu_exp->Dump();
+          std::cout<<" %"<<nowww<<" = sub 0, %"<<nowww-1<<std::endl;
+          nowww++;
+        } 
+        else if(op==EqualZero){
+          pu_exp->Dump();
+          std::cout<<" %"<<nowww<<" = eq 0, %"<<nowww-1<<std::endl;
+          nowww++;
+        }
+      }
+      else
+      {
+        std::vector<int> param_vars;
+        for (auto&& param : params)
+        {
+          param->Dump();
+          param_vars.push_back(nowww-1);
+        }
+        assert(function_table.count(ident));
+        assert(function_param_num[ident] == params.size());
+        if(function_ret_type[ident]=="int") std::cout<<" %"<<nowww<<" = ";
+        std::cout<<" call "<<function_table[ident]<<"(";
+        for(int i=0;i<param_vars.size();++i)
+        {
+          std::cout<<"%"<<param_vars[i];
+          if(i!=param_vars.size()-1) std::cout<<",";
+        }
+        std::cout<<")"<<std::endl;
         nowww++;
       }
     }
@@ -650,16 +777,18 @@ class VarDefAST : public BaseAST{
     void Dump() const override
     {
       var_types[level][ident]=1;
-      std::cout<<" @"<<ident<<"_"<<level<<" = alloc i32"<<std::endl;
+      symbol_tables[level][ident]=func_num;
       if(ifhavev)
       {
+        std::cout<<" @"<<ident<<"_"<<func_num<<"_"<<level<<" = alloc i32"<<std::endl;
         initval->Dump();
-        std::cout<<" store %"<<nowww-1<<", @"<<ident<<"_"<<level<<std::endl;
-        symbol_tables[level][ident]=initval->Calc();
+        std::cout<<" store %"<<nowww-1<<", @"<<ident<<"_"<<func_num<<"_"<<level<<std::endl;
       }
       else
       {
-        symbol_tables[level][ident]=0;
+        if(level==0)
+          std::cout<<" @"<<ident<<"_"<<func_num<<"_"<<level<<" = alloc i32, zeroinit"<<std::endl;
+        else std::cout<<" @"<<ident<<"_"<<func_num<<"_"<<level<<" = alloc i32"<<std::endl;
       }
     }
 };
@@ -688,8 +817,10 @@ class LValAST : public BaseAST{
         {
           if(var_types[i][ident]==0)
             std::cout<<" %"<<nowww<<" = add "<<"0 ,"<<symbol_tables[i][ident]<<std::endl;
-          else 
-            std::cout<<" %"<<nowww<<" = load "<<"@"<<ident<<"_"<<i<<std::endl; 
+          else if(var_types[i][ident]==1)
+            std::cout<<" %"<<nowww<<" = load "<<"@"<<ident<<"_"<<symbol_tables[i][ident]<<"_"<<i<<std::endl;
+          else
+            std::cout<<" %"<<nowww<<" = load "<<"%"<<ident<<"_"<<symbol_tables[i][ident]<<"_"<<i<<std::endl;
           nowww++;
           break;
         }
@@ -713,7 +844,10 @@ class LValAST : public BaseAST{
       {
         if(var_types[i].count(ident))
           { 
-            std::cout<<" store %"<<nowww-1<<", @"<<ident<<"_"<<i<<std::endl;
+            if(var_types[i][ident]!=2)
+              std::cout<<" store %"<<nowww-1<<", @"<<ident<<"_"<<func_num<<"_"<<i<<std::endl;
+            else
+              std::cout<<" store %"<<nowww-1<<", %"<<ident<<"_"<<func_num<<"_"<<i<<std::endl;
             break;
           }
       }
