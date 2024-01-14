@@ -1,18 +1,19 @@
-int a=4;
-
-int half(int x,int y, int z) {
-  int t=a+x+y+z;
-  return t;
+int a=1;
+const int b=8;
+int pow(int x) {
+  if(x==0) return 1;
+  return 2*pow(x-1);
 }
 int xx(int x,int y,int z )
 {
    return y+z;
 }
-int x=2;
+int x;
 void f() {}
 
 int main() {
+  int w=15;
   f();
-  int b= xx(1,2,3);
-  return half(10,a,5)+b;
+  
+  return pow(a)+pow(b);
 }

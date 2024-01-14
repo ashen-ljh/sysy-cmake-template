@@ -8,31 +8,29 @@ decl @starttime()
 decl @stoptime()
 
  global @a_0_0 = alloc i32
- %0 = add 0, 4
+ %0 = add 0, 1
  store %0, @a_0_0
- global @x_0_0 = alloc i32
- %1 = add 0, 2
- store %1, @x_0_0
+ global @x_0_0 = alloc i32, zeroinit
 
-fun @half(@x_1_1: i32, @y_1_1: i32, @z_1_1: i32): i32 {
+fun @pow(@x_1_1: i32): i32 {
 %entry:
  %x_1_1 = alloc i32
  store @x_1_1, %x_1_1
- %y_1_1 = alloc i32
- store @y_1_1, %y_1_1
- %z_1_1 = alloc i32
- store @z_1_1, %z_1_1
- @t_1_1 = alloc i32
- %2 = load %z_1_1
- %3 = load %y_1_1
- %4 = load %x_1_1
- %5 = load @a_0_0
- %6 = add %4, %5
- %7 = add %3, %6
- %8 = add %2, %7
- store %8, @t_1_1
- %9 = load @t_1_1
- ret %9
+ %1 = load %x_1_1
+ %2 = add 0, 0
+ %3 = eq %1, %2
+ br %3, %then__0, %end__0
+%then__0:
+ %4 = add 0, 1
+ ret %4
+%end__0:
+ %5 = add 0, 2
+ %6 = add 0, 1
+ %7 = load %x_1_1
+ %8 = sub %7, %6
+ %9 = call @pow(%8)
+ %10 = mul %5, %9
+ ret %10
 }
 fun @xx(@x_2_1: i32, @y_2_1: i32, @z_2_1: i32): i32 {
 %entry:
@@ -42,31 +40,25 @@ fun @xx(@x_2_1: i32, @y_2_1: i32, @z_2_1: i32): i32 {
  store @y_2_1, %y_2_1
  %z_2_1 = alloc i32
  store @z_2_1, %z_2_1
- %10 = load %z_2_1
- %11 = load %y_2_1
- %12 = add %10, %11
- ret %12
+ %11 = load %z_2_1
+ %12 = load %y_2_1
+ %13 = add %11, %12
+ ret %13
 }
 fun @f(){
 %entry:
  ret
 }
-fun @main(@a_4_1: i32): i32 {
+fun @main(): i32 {
 %entry:
- %a_4_1 = alloc i32
- store @a_4_1, %a_4_1
+ @w_4_1 = alloc i32
+ %14 = add 0, 15
+ store %14, @w_4_1
  call @f()
- @b_4_1 = alloc i32
- %14 = add 0, 1
- %15 = add 0, 2
- %16 = add 0, 3
- %17 = call @xx(%14, %15, %16)
- store %17, @b_4_1
- %18 = load @b_4_1
- %19 = add 0, 10
- %20 = load %a_4_1
- %21 = add 0, 5
- %22 = call @half(%19, %20, %21)
- %23 = add %18, %22
- ret %23
+ %16 = add 0 ,8
+ %17 = call @pow(%16)
+ %18 = load @a_0_0
+ %19 = call @pow(%18)
+ %20 = add %17, %19
+ ret %20
 }
