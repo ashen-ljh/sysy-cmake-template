@@ -24,16 +24,39 @@ fun @half(@x_1_0: i32, @y_1_0: i32, @z_1_0: i32): i32 {
  %3 = div %1, %2
  ret %3
 }
+fun @xx(@x_2_0: i32, @y_2_0: i32, @z_2_0: i32): i32 {
+%entry:
+ %x_2_1 = alloc i32
+ store @x_2_1, %x_2_1
+ %y_2_1 = alloc i32
+ store @y_2_1, %y_2_1
+ %z_2_1 = alloc i32
+ store @z_2_1, %z_2_1
+ %4 = load %z_2_1
+ %5 = load %y_2_1
+ %6 = add %4, %5
+ ret %6
+}
 fun @f(){
 %entry:
  ret
 }
-fun @main(): i32 {
+fun @main(@a_4_0: i32): i32 {
 %entry:
+ %a_4_1 = alloc i32
+ store @a_4_1, %a_4_1
  call @f()
- %5 = add 0, 10
- %6 = load @a_0_0
- %7 = add 0, 5
- %8 =  call @half(%5,%6,%7)
- ret %8
+ @b_4_1 = alloc i32
+ %8 = add 0, 1
+ %9 = add 0, 2
+ %10 = add 0, 3
+ %11 = call @xx(%8, %9, %10)
+ store %11, @b_4_1
+ %12 = load @b_4_1
+ %13 = add 0, 10
+ %14 = load %a_4_1
+ %15 = add 0, 5
+ %16 = call @half(%13, %14, %15)
+ %17 = add %12, %16
+ ret %17
 }

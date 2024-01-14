@@ -124,7 +124,7 @@ class FuncFParamAST : public BaseAST{
     void Dump() const override{
       assert(b_type == "int");
       std::string param_name="@"+ident;
-      std::string name=param_name+"_"+std::to_string(func_num)+"_"+std::to_string(level);
+      std::string name=param_name+"_"+std::to_string(func_num)+"_"+std::to_string(level+1);
       std::cout<<name;
     }
     std::string get_ident() const override{
@@ -677,12 +677,12 @@ class UnaryExpAST : public BaseAST{
         }
         assert(function_table.count(ident));
         assert(function_param_num[ident] == params.size());
-        if(function_ret_type[ident]=="int") std::cout<<" %"<<nowww<<" = ";
+        if(function_ret_type[ident]=="int") std::cout<<" %"<<nowww<<" =";
         std::cout<<" call "<<function_table[ident]<<"(";
         for(int i=0;i<param_vars.size();++i)
         {
           std::cout<<"%"<<param_vars[i];
-          if(i!=param_vars.size()-1) std::cout<<",";
+          if(i!=param_vars.size()-1) std::cout<<", ";
         }
         std::cout<<")"<<std::endl;
         nowww++;
