@@ -1,13 +1,14 @@
 int a=4;
 
 int half(int x,int y, int z) {
-  return x / 2;
+  int t=a+x+y+z;
+  return t;
 }
 int xx(int x,int y,int z )
 {
    return y+z;
 }
-
+int x=2;
 void f() {}
 
 int main(int a) {

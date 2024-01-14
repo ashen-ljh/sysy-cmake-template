@@ -794,6 +794,7 @@ class VarDefAST : public BaseAST{
       symbol_tables[level][ident]=func_num;
       if(ifhavev)
       {
+        if(level==0) std::cout<<" global";
         std::cout<<" @"<<ident<<"_"<<func_num<<"_"<<level<<" = alloc i32"<<std::endl;
         initval->Dump();
         std::cout<<" store %"<<nowww-1<<", @"<<ident<<"_"<<func_num<<"_"<<level<<std::endl;
@@ -801,7 +802,7 @@ class VarDefAST : public BaseAST{
       else
       {
         if(level==0)
-          std::cout<<" @"<<ident<<"_"<<func_num<<"_"<<level<<" = alloc i32, zeroinit"<<std::endl;
+          std::cout<<" global @"<<ident<<"_"<<func_num<<"_"<<level<<" = alloc i32, zeroinit"<<std::endl;
         else std::cout<<" @"<<ident<<"_"<<func_num<<"_"<<level<<" = alloc i32"<<std::endl;
       }
     }
