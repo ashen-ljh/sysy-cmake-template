@@ -155,7 +155,7 @@ class FuncDefAST : public BaseAST {
     {
       idents.push_back(params[i]->get_ident());
       params[i]->Dump();
-      std::string param_name = "@" + idents.back()+"_"+std::to_string(func_num)+"_"+std::to_string(level);
+      std::string param_name = "@" + idents.back()+"_"+std::to_string(func_num)+"_"+std::to_string(level+1);
       names.push_back(param_name);
       types.push_back(params[i]->Type());
       std::cout << ": " << params[i]->Type();
