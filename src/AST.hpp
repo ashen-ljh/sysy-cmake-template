@@ -172,6 +172,7 @@ class FuncDefAST : public BaseAST {
 
 class BlockAST : public BaseAST{
   public:
+    int c=0;
     std::vector<std::unique_ptr<BaseAST>> block_item_list;
     std::string func="";
     void Dump() const override {
@@ -202,7 +203,17 @@ class BlockAST : public BaseAST{
       for (auto&& block_item : block_item_list) 
       {
         block_item->Dump();
-        if(block_item->Type()=="ret"||block_item->Type()=="break"||block_item->Type()=="cont") break;
+        if(block_item->Type()=="ret"||block_item->Type()=="break"||block_item->Type()=="cont") 
+        {
+          c=1;
+          break;
+        }
+      }
+      if(c==0) 
+      {
+        if (func_type == "int")std::cout << " ret 0" << std::endl;
+        else if (func_type == "void")std::cout << " ret" << std::endl;
+        else assert(false);
       }
       if(level==1) std::cout<<"}"<<std::endl;
       symbol_tables.pop_back();
