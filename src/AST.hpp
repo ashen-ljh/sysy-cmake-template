@@ -172,10 +172,11 @@ class FuncDefAST : public BaseAST {
 
 class BlockAST : public BaseAST{
   public:
-    int c=0;
     std::vector<std::unique_ptr<BaseAST>> block_item_list;
     std::string func="";
+    std::string func_type;
     void Dump() const override {
+      int c=0;
       level++;
       std::map<std::string, int> symbol_table;
       std::map<std::string, int> var_type;
@@ -184,6 +185,7 @@ class BlockAST : public BaseAST{
       if(level==1) std::cout<<"%""entry:"<<std::endl;
       if (func != "")
       {
+        //std::cout<<func<<std::endl;
         std::vector<std::string> idents = function_param_idents[func];
         std::vector<std::string> names = function_param_names[func];
         std::vector<std::string> types = function_param_types[func];
@@ -209,7 +211,8 @@ class BlockAST : public BaseAST{
           break;
         }
       }
-      if(c==0) 
+      
+      if(func!=""&&c==0) 
       {
         if (func_type == "int")std::cout << " ret 0" << std::endl;
         else if (func_type == "void")std::cout << " ret" << std::endl;

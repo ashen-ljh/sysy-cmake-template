@@ -1,7 +1,10 @@
-int var;
+int half(int x) {
+  return x / 2;
+}
 
-const int one = 1;
+void f() {}
 
 int main() {
-  return var + one;
+  f();
+  return half(10);
 }

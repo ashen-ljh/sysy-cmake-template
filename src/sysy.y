@@ -104,6 +104,8 @@ FuncDef
     ast->ident = *unique_ptr<string>($2);
     ast->block = unique_ptr<BaseAST>($5);
     cout<<"FuncDef"<<endl;
+    ((BlockAST*)(ast->block).get())->func = ast->ident;
+    ((BlockAST*)(ast->block).get())->func_type = ast->func_type;
     $$ = ast;
   }|Type IDENT '(' FuncFParams ')' Block{
     auto ast=new FuncDefAST();
@@ -115,6 +117,7 @@ FuncDef
     ast->block = unique_ptr<BaseAST>($6);
     cout<<"FuncDef"<<endl;
     ((BlockAST*)(ast->block).get())->func = ast->ident;
+    ((BlockAST*)(ast->block).get())->func_type = ast->func_type;
     $$ = ast;
   }
   ;

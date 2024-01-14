@@ -7,12 +7,27 @@ decl @putarray(i32, *i32)
 decl @starttime()
 decl @stoptime()
 
- @var_0_0 = alloc i32, zeroinit
 
+fun @half(@x_1_0: i32): i32 {
+%entry:
+half
+ %x_1_0 = alloc i32
+ store @x_1_0, %x_1_0
+ %0 = load %x_1_1
+ %1 = add 0, 2
+ %2 = div %0, %1
+ ret %2
+}
+fun @f(){
+%entry:
+f
+ ret
+}
 fun @main(): i32 {
 %entry:
- %0 = add 0 ,1
- %1 = load @var_0_0
- %2 = add %0, %1
- ret %2
+main
+ call @f()
+ %4 = add 0, 10
+ %5 =  call @half(%4)
+ ret %5
 }
